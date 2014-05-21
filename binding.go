@@ -17,20 +17,24 @@ func Bind(req *http.Request, userStruct FieldMapper) (errors Errors) {
 
 	if strings.Contains(contentType, "form-urlencoded") {
 		return Form(req, userStruct)
-	} else if strings.Contains(contentType, "multipart/form-data") {
+	}
+
+	if strings.Contains(contentType, "multipart/form-data") {
 		return MultipartForm(req, userStruct)
-	} else if strings.Contains(contentType, "json") {
+	}
+
+	if strings.Contains(contentType, "json") {
 		return Json(req, userStruct)
-	} else {
-		if contentType == "" {
-			if len(req.URL.Query()) > 0 {
-				return Form(req, userStruct)
-			} else {
-				errors.Add([]string{}, ContentTypeError, "Empty Content-Type")
-			}
+	}
+
+	if contentType == "" {
+		if len(req.URL.Query()) > 0 {
+			return Form(req, userStruct)
 		} else {
-			errors.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
+			errors.Add([]string{}, ContentTypeError, "Empty Content-Type")
 		}
+	} else {
+		errors.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
 	}
 
 	return

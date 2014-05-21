@@ -56,19 +56,46 @@ func handler(resp http.ResponseWriter, req *http.Request) {
 }
 ```
 
-However, this handler ignores any errors which are returned from `binding.Bind()`. There is a built-in error handler that writes the errors to the response for you. You can save the errors and use the handler like this:
+
+Validation
+-----------
+
+Validating the data is supported out-of-the-box. Just implement the `binding.Validator` interface on your type:
 
 ```go
+func (cf ContactForm) Validate(errors binding.Errors, req *http.Request) binding.Errors {
+	if len(bp.Message) < 5 {
+		errors.Add([]string{"message"}, "LengthError", "Message should be at least 5 characters")
+	}
+	return errors
+}
+```
+
+Your errors will be combined with the ones produced by `Form` or `Json` deserializers.
+
+
+
+Error Handling
+---------------
+
+Errors are returned from calls to `binding.Bind()` and the other deserializers. You can ignore them if you want, or you can use them. The `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
+
+```go
+binding.Bind(req, contactForm)
 if errors.Handle(resp) {
 	return
 }
 ```
 
-As you can see, `errors.Handle()` returns `true` if there were errors that it wrote to the response.
+As you can see, if `errors.Handle()` wrote errors to the response, your handler may gracefully exit.
+
+
 
 
 Supported types
 ----------------
+
+The following list is for form deserialization. (JSON requests are delegated to `encoding/json` so any type that can be marshalled/unmarshalled is supported.)
 
 - uint, uint8, uint16, uint32, uint64
 - int, int8, int16, int32, int64
