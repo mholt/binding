@@ -49,6 +49,15 @@ func Form(req *http.Request, userStruct FieldMapper) (errors Errors) {
 	for fieldName, fieldPointer := range fm {
 		str := req.Form.Get(fieldName)
 
+		if str == "" {
+			continue
+		}
+
+		fieldSpec, fieldHasSpec := fieldPointer.(Field)
+		if fieldHasSpec {
+			fieldPointer = fieldSpec.Target
+		}
+
 		errorHandler := func(err error) {
 			if err != nil {
 				errors.Add([]string{fieldName}, TypeError, err.Error())
@@ -57,86 +66,50 @@ func Form(req *http.Request, userStruct FieldMapper) (errors Errors) {
 
 		switch t := fieldPointer.(type) {
 		case *uint8:
-			if str == "" {
-				str = "0"
-			}
-			val, err := strconv.ParseUint(str, 10, 8) // TODO: Should bases be 0 so they are auto-detected, or should we keep assuming base 10?
+			val, err := strconv.ParseUint(str, 10, 8)
 			errorHandler(err)
 			*t = uint8(val)
 		case *uint16:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseUint(str, 10, 16)
 			errorHandler(err)
 			*t = uint16(val)
 		case *uint32:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseUint(str, 10, 32)
 			errorHandler(err)
 			*t = uint32(val)
 		case *uint64:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseUint(str, 10, 64)
 			errorHandler(err)
 			*t = val
 		case *int8:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseInt(str, 10, 8)
 			errorHandler(err)
 			*t = int8(val)
 		case *int16:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseInt(str, 10, 16)
 			errorHandler(err)
 			*t = int16(val)
 		case *int32:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseInt(str, 10, 32)
 			errorHandler(err)
 			*t = int32(val)
 		case *int64:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseInt(str, 10, 64)
 			errorHandler(err)
 			*t = val
 		case *float32:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseFloat(str, 32)
 			errorHandler(err)
 			*t = float32(val)
 		case *float64:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseFloat(str, 64)
 			errorHandler(err)
 			*t = val
 		case *uint:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseUint(str, 10, 0)
 			errorHandler(err)
 			*t = uint(val)
 		case *int:
-			if str == "" {
-				str = "0"
-			}
 			val, err := strconv.ParseInt(str, 10, 0)
 			errorHandler(err)
 			*t = int(val)
@@ -147,7 +120,13 @@ func Form(req *http.Request, userStruct FieldMapper) (errors Errors) {
 		case *string:
 			*t = str
 		case *time.Time:
-			//*t, _ = time.Parse()
+			timeFormat := TimeFormat
+			if fieldSpec.TimeFormat != "" {
+				timeFormat = fieldSpec.TimeFormat
+			}
+			val, err := time.Parse(timeFormat, str)
+			errorHandler(err)
+			*t = val
 		}
 	}
 
@@ -259,7 +238,7 @@ func Validate(req *http.Request, userStruct FieldMapper) (errors Errors) {
 						addRequiredError()
 					}
 				case *bool:
-					if *t == false {
+					if !*t == false {
 						addRequiredError()
 					}
 				case *string:
@@ -297,8 +276,9 @@ type (
 
 	// Field describes the properties of a field.
 	Field struct {
-		Target   interface{}
-		Required bool
+		Target     interface{}
+		Required   bool
+		TimeFormat string
 	}
 
 	// Validator can be implemented by your type to handle some
@@ -319,6 +299,10 @@ var (
 	// Maximum amount of memory to use when parsing a multipart form.
 	// Set this to whatever value you prefer; default is 10 MB.
 	MaxMemory = int64(1024 * 1024 * 10)
+
+	// If no TimeFormat is specified in a time.Time field, this
+	// format will be used by default when parsing.
+	TimeFormat = time.RFC3339
 )
 
 const (
