@@ -56,7 +56,7 @@ func handler(resp http.ResponseWriter, req *http.Request) {
 }
 ```
 
-However, this handler ignores any errors. Suppose that `message` was not filled out and is an empty string. There is a built-in error handler that writes the errors to the response for you. You can use it like this:
+However, this handler ignores any errors which are returned from `binding.Bind()`. There is a built-in error handler that writes the errors to the response for you. You can save the errors and use the handler like this:
 
 ```go
 if errors.Handle(resp) {
