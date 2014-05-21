@@ -64,7 +64,7 @@ Validating the data is supported out-of-the-box. Just implement the `binding.Val
 
 ```go
 func (cf ContactForm) Validate(errors binding.Errors, req *http.Request) binding.Errors {
-	if len(bp.Message) < 5 {
+	if len(cf.Message) < 5 {
 		errors.Add([]string{"message"}, "LengthError", "Message should be at least 5 characters")
 	}
 	return errors
