@@ -81,7 +81,7 @@ Error Handling
 Errors are returned from calls to `binding.Bind()` and the other deserializers. You can ignore them if you want, or you can use them. The `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
 
 ```go
-binding.Bind(req, contactForm)
+errors := binding.Bind(req, contactForm)
 if errors.Handle(resp) {
 	return
 }
