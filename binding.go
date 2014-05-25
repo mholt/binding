@@ -2,6 +2,7 @@ package binding
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -12,7 +13,9 @@ import (
 // Bind takes data out of the request and deserializes into a struct according
 // to the Content-Type of the request. If no Content-Type is specified, there
 // better be data in the query string, otherwise an error will be produced.
-func Bind(req *http.Request, userStruct FieldMapper) (errors Errors) {
+func Bind(req *http.Request, userStruct FieldMapper) Errors {
+	var errs Errors
+
 	contentType := req.Header.Get("Content-Type")
 
 	if strings.Contains(contentType, "form-urlencoded") {
@@ -31,22 +34,24 @@ func Bind(req *http.Request, userStruct FieldMapper) (errors Errors) {
 		if len(req.URL.Query()) > 0 {
 			return Form(req, userStruct)
 		} else {
-			errors.Add([]string{}, ContentTypeError, "Empty Content-Type")
+			errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
 		}
 	} else {
-		errors.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
+		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
 	}
 
-	return
+	return errs
 }
 
 // Form deserializes form data out of the request into a struct you provide.
 // This function invokes data validation after deserialization.
-func Form(req *http.Request, userStruct FieldMapper) (errors Errors) {
+func Form(req *http.Request, userStruct FieldMapper) Errors {
+	var errs Errors
+
 	parseErr := req.ParseForm()
 	if parseErr != nil {
-		errors.Add([]string{}, DeserializationError, parseErr.Error())
-		return
+		errs.Add([]string{}, DeserializationError, parseErr.Error())
+		return errs
 	}
 
 	fm := userStruct.FieldMap()
@@ -64,8 +69,12 @@ func Form(req *http.Request, userStruct FieldMapper) (errors Errors) {
 
 		errorHandler := func(err error) {
 			if err != nil {
-				errors.Add([]string{fieldName}, TypeError, err.Error())
+				errs.Add([]string{fieldName}, TypeError, err.Error())
 			}
+		}
+
+		if fieldSpec.Binder != nil {
+			fieldSpec.Binder(str, &errs)
 		}
 
 		switch t := fieldPointer.(type) {
@@ -131,26 +140,28 @@ func Form(req *http.Request, userStruct FieldMapper) (errors Errors) {
 			val, err := time.Parse(timeFormat, str)
 			errorHandler(err)
 			*t = val
+		default:
+			errorHandler(errors.New("Field type is unsupported by the application"))
 		}
 	}
 
-	errors = append(errors, Validate(req, userStruct)...)
+	errs = append(errs, Validate(req, userStruct)...)
 
-	return
+	return errs
 }
 
 // MultipartForm reads a multipart form request and deserializes its data into
 // a struct you provide. It then calls Form to get the rest of the form data
 // out of the request.
-func MultipartForm(req *http.Request, userStruct FieldMapper) (errors Errors) {
+func MultipartForm(req *http.Request, userStruct FieldMapper) (errs Errors) {
 	multipartReader, err := req.MultipartReader()
 	if err != nil {
-		errors.Add([]string{}, DeserializationError, err.Error())
+		errs.Add([]string{}, DeserializationError, err.Error())
 		return
 	} else {
 		form, parseErr := multipartReader.ReadForm(MaxMemory)
 		if parseErr != nil {
-			errors.Add([]string{}, DeserializationError, parseErr.Error())
+			errs.Add([]string{}, DeserializationError, parseErr.Error())
 			return
 		}
 		req.MultipartForm = form
@@ -161,20 +172,20 @@ func MultipartForm(req *http.Request, userStruct FieldMapper) (errors Errors) {
 // Json deserializes a JSON request body into a struct you specify
 // using the standard encoding/json package (which uses reflection).
 // This function invokes data validation after deserialization.
-func Json(req *http.Request, userStruct FieldMapper) (errors Errors) {
+func Json(req *http.Request, userStruct FieldMapper) (errs Errors) {
 	if req.Body != nil {
 		defer req.Body.Close()
 		err := json.NewDecoder(req.Body).Decode(userStruct)
 		if err != nil && err != io.EOF {
-			errors.Add([]string{}, DeserializationError, err.Error())
+			errs.Add([]string{}, DeserializationError, err.Error())
 			return
 		}
 	} else {
-		errors.Add([]string{}, DeserializationError, "Empty request body")
+		errs.Add([]string{}, DeserializationError, "Empty request body")
 		return
 	}
 
-	errors = append(errors, Validate(req, userStruct)...)
+	errs = append(errs, Validate(req, userStruct)...)
 
 	return
 }
@@ -182,12 +193,12 @@ func Json(req *http.Request, userStruct FieldMapper) (errors Errors) {
 // Validate ensures that all conditions have been met on every field in the
 // populated struct. Validation should occur after the request has been
 // deserialized into the struct.
-func Validate(req *http.Request, userStruct FieldMapper) (errors Errors) {
+func Validate(req *http.Request, userStruct FieldMapper) (errs Errors) {
 	fm := userStruct.FieldMap()
 
 	for fieldName, fieldSpec := range fm {
 		addRequiredError := func() {
-			errors.Add([]string{fieldName}, RequiredError, "Required")
+			errs.Add([]string{fieldName}, RequiredError, "Required")
 		}
 
 		if field, ok := fieldSpec.(Field); ok {
@@ -259,7 +270,7 @@ func Validate(req *http.Request, userStruct FieldMapper) (errors Errors) {
 	}
 
 	if validator, ok := userStruct.(Validator); ok {
-		errors = validator.Validate(errors, req)
+		errs = validator.Validate(errs, req)
 	}
 
 	return
@@ -283,6 +294,7 @@ type (
 		Target     interface{}
 		Required   bool
 		TimeFormat string
+		Binder     func(string, *Errors)
 	}
 
 	// Validator can be implemented by your type to handle some
@@ -304,7 +316,7 @@ var (
 	// Set this to whatever value you prefer; default is 10 MB.
 	MaxMemory = int64(1024 * 1024 * 10)
 
-	// If no TimeFormat is specified in a time.Time field, this
+	// If no TimeFormat is specified for a time.Time field, this
 	// format will be used by default when parsing.
 	TimeFormat = time.RFC3339
 )

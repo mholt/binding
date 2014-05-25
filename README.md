@@ -11,7 +11,7 @@ Features
 ---------
 
 - Deserializes form, multipart form, or JSON data from requests
-- Not middleware: just a function call or two
+- Not middleware: just a function call
 - Usable in any setting where `net/http` is present
 
 
@@ -63,11 +63,11 @@ Validation
 Validating the data is supported out-of-the-box. Just implement the `binding.Validator` interface on your type:
 
 ```go
-func (cf ContactForm) Validate(errors binding.Errors, req *http.Request) binding.Errors {
+func (cf ContactForm) Validate(errs binding.Errors, req *http.Request) binding.Errors {
 	if len(cf.Message) < 5 {
-		errors.Add([]string{"message"}, "LengthError", "Message should be at least 5 characters")
+		errs.Add([]string{"message"}, "LengthError", "Message should be at least 5 characters")
 	}
-	return errors
+	return errs
 }
 ```
 
@@ -78,16 +78,16 @@ Your errors will be combined with the ones produced by `Form` or `Json` deserial
 Error Handling
 ---------------
 
-Errors are returned from calls to `binding.Bind()` and the other deserializers. You can ignore them if you want, or you can use them. The `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
+`binding.Bind()` and the other deserializers return errors. You don't have to use them, but the `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
 
 ```go
-errors := binding.Bind(req, contactForm)
-if errors.Handle(resp) {
+errs := binding.Bind(req, contactForm)
+if errs.Handle(resp) {
 	return
 }
 ```
 
-As you can see, if `errors.Handle()` wrote errors to the response, your handler may gracefully exit.
+As you can see, if `errs.Handle()` wrote errors to the response, your handler may gracefully exit.
 
 
 
