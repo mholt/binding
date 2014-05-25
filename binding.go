@@ -75,6 +75,7 @@ func Form(req *http.Request, userStruct FieldMapper) Errors {
 
 		if fieldSpec.Binder != nil {
 			fieldSpec.Binder(str, &errs)
+			continue
 		}
 
 		switch t := fieldPointer.(type) {
@@ -153,16 +154,19 @@ func Form(req *http.Request, userStruct FieldMapper) Errors {
 // MultipartForm reads a multipart form request and deserializes its data into
 // a struct you provide. It then calls Form to get the rest of the form data
 // out of the request.
-func MultipartForm(req *http.Request, userStruct FieldMapper) (errs Errors) {
+// TODO: This implementation is not complete yet
+func MultipartForm(req *http.Request, userStruct FieldMapper) Errors {
+	var errs Errors
+
 	multipartReader, err := req.MultipartReader()
 	if err != nil {
 		errs.Add([]string{}, DeserializationError, err.Error())
-		return
+		return errs
 	} else {
 		form, parseErr := multipartReader.ReadForm(MaxMemory)
 		if parseErr != nil {
 			errs.Add([]string{}, DeserializationError, parseErr.Error())
-			return
+			return errs
 		}
 		req.MultipartForm = form
 	}
@@ -172,28 +176,32 @@ func MultipartForm(req *http.Request, userStruct FieldMapper) (errs Errors) {
 // Json deserializes a JSON request body into a struct you specify
 // using the standard encoding/json package (which uses reflection).
 // This function invokes data validation after deserialization.
-func Json(req *http.Request, userStruct FieldMapper) (errs Errors) {
+func Json(req *http.Request, userStruct FieldMapper) Errors {
+	var errs Errors
+
 	if req.Body != nil {
 		defer req.Body.Close()
 		err := json.NewDecoder(req.Body).Decode(userStruct)
 		if err != nil && err != io.EOF {
 			errs.Add([]string{}, DeserializationError, err.Error())
-			return
+			return errs
 		}
 	} else {
 		errs.Add([]string{}, DeserializationError, "Empty request body")
-		return
+		return errs
 	}
 
 	errs = append(errs, Validate(req, userStruct)...)
 
-	return
+	return errs
 }
 
 // Validate ensures that all conditions have been met on every field in the
 // populated struct. Validation should occur after the request has been
 // deserialized into the struct.
-func Validate(req *http.Request, userStruct FieldMapper) (errs Errors) {
+func Validate(req *http.Request, userStruct FieldMapper) Errors {
+	var errs Errors
+
 	fm := userStruct.FieldMap()
 
 	for fieldName, fieldSpec := range fm {
@@ -273,7 +281,7 @@ func Validate(req *http.Request, userStruct FieldMapper) (errs Errors) {
 		errs = validator.Validate(errs, req)
 	}
 
-	return
+	return errs
 }
 
 type (
