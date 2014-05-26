@@ -143,6 +143,7 @@ func (t *MyType) FieldMap() binding.FieldMap {
 		},
 	}
 }
+```
 
 Notice that the `binding.Errors` type has a convenience method `.Add()` which you can use to append to the slice if you prefer.
 
