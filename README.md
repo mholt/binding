@@ -69,19 +69,6 @@ func (cf *ContactForm) FieldMap() binding.FieldMap {
 	}
 }
 
-// You may optionally implement the binding.Validator interface
-// for custom data validation
-func (cf ContactForm) Validate(errs binding.Errors, req *http.Request) binding.Errors {
-	if cf.Message == "Go needs generics" {
-		errs = append(errs, binding.Error{
-			FieldNames:     []string{"message"},
-			Classification: "ComplaintError",
-			Message:        "Go has generics. They're called interfaces.",
-		})
-	}
-	return errs
-}
-
 // Now data binding, validation, and error handling is taken care of while
 // keeping your application handler clean and simple.
 func handler(resp http.ResponseWriter, req *http.Request) {
@@ -97,6 +84,25 @@ func handler(resp http.ResponseWriter, req *http.Request) {
 func main() {
 	http.HandleFunc("/contact", handler)
 	http.ListenAndServe(":3000", nil)
+}
+```
+
+
+Custom data validation
+-----------------------
+
+You may optionally have your type implement the `binding.Validator` interface to perform your own data validation.
+
+```go
+func (cf ContactForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	if cf.Message == "Go needs generics" {
+		errs = append(errs, binding.Error{
+			FieldNames:     []string{"message"},
+			Classification: "ComplaintError",
+			Message:        "Go has generics. They're called interfaces.",
+		})
+	}
+	return errs
 }
 ```
 
