@@ -126,7 +126,7 @@ As you can see, if `.Handle()` wrote errors to the response, your handler may gr
 Binding custom types
 ---------------------
 
-You can bind form data into custom types by using a `Binder` func in your field map:
+You can bind form data into custom types by using a `Binder` func in your field map. Here's a contrived example that binds an integer (not necessary, but you get the idea):
 
 ```go
 func (t *MyType) FieldMap() binding.FieldMap {
