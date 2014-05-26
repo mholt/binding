@@ -77,7 +77,7 @@ func Form(req *http.Request, userStruct FieldMapper) Errors {
 		}
 
 		if fieldSpec.Binder != nil {
-			errs = append(errs, fieldSpec.Binder(strs, errs)...)
+			errs = fieldSpec.Binder(strs, errs)
 			continue
 		}
 

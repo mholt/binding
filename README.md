@@ -1,4 +1,5 @@
-![binding is reflectionless](http://mholt.github.io/binding/resources/images/binding-sm.png)
+<img src="http://mholt.github.io/binding/resources/images/binding-sm.png" height="250" alt="binding is reflectionless data binding for Go">
+
 
 binding
 =======
@@ -10,11 +11,21 @@ Reflectionless data binding for Go's net/http
 Features
 ---------
 
-- Deserializes form, multipart form, and JSON data from requests
-- Not middleware: just a function call
-- Built-in error handling
-- Performs data validation
+- HTTP request data binding
+- Data validation (custom and built-in)
+- Error handling
+
+
+
+Benefits
+---------
+
+- Moves data binding, validation, and error handling out of your application's handler
+- Reads Content-Type to deserialize form, multipart form, and JSON data from requests
+- No middleware: just a function call
 - Usable in any setting where `net/http` is present (Negroni, gocraft/web, std lib, etc.)
+- No reflection
+
 
 
 Usage example
@@ -60,15 +71,15 @@ func (cf *ContactForm) FieldMap() binding.FieldMap {
 
 // You may optionally implement the binding.Validator interface
 // for custom data validation
-func (cf ContactForm) Validate(errors binding.Errors, req *http.Request) binding.Errors {
+func (cf ContactForm) Validate(errs binding.Errors, req *http.Request) binding.Errors {
 	if cf.Message == "Go needs generics" {
-		errors = append(errors, binding.Error{
+		errs = append(errs, binding.Error{
 			FieldNames:     []string{"message"},
 			Classification: "ComplaintError",
 			Message:        "Go has generics. They're called interfaces.",
 		})
 	}
-	return errors
+	return errs
 }
 
 // Now data binding, validation, and error handling is taken care of while
@@ -106,11 +117,34 @@ As you can see, if `.Handle()` wrote errors to the response, your handler may gr
 
 
 
+Binding custom types
+---------------------
+
+You can bind form data into custom types by using a `Binder` func in your field map:
+
+```go
+func (t *MyType) FieldMap() binding.FieldMap {
+	return binding.FieldMap{
+		"number": binding.Field{
+			Binder: func(formVals []string, errs binding.Errors) binding.Errors {
+				val, err := strconv.Atoi(formVals[0])
+				if err != nil {
+					errs.Add([]string{"id"}, binding.DeserializationError, err.Error())
+				}
+				t.SomeNumber = val
+				return errs
+			},
+		},
+	}
+}
+
+Notice that the `binding.Errors` type has a convenience method `.Add()` which you can use to append to the slice if you prefer.
+
 
 Supported types (forms)
 ------------------------
 
-The following types are supported in form deserialization. (JSON requests are delegated to `encoding/json`.)
+The following types are supported in form deserialization by default. (JSON requests are delegated to `encoding/json`.)
 
 - uint, []uint, uint8, uint16, uint32, uint64
 - int, []int, int8, int16, int32, int64
