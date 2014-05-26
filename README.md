@@ -10,68 +10,84 @@ Reflectionless data binding for Go's net/http
 Features
 ---------
 
-- Deserializes form, multipart form, or JSON data from requests
+- Deserializes form, multipart form, and JSON data from requests
 - Not middleware: just a function call
-- Usable in any setting where `net/http` is present
+- Built-in error handling
+- Performs data validation
+- Usable in any setting where `net/http` is present (Negroni, gocraft/web, std lib, etc.)
 
 
-Usage
-------
-
-Suppose you have a contact form on your site that takes a user ID, email, and a message, and at least the message is required. Make a struct to hold the data:
-
-```go
-type ContactForm struct {
-    UserID  int
-    Email   string
-    Message string
-}
-```
-
-Then we have it implement `binding.FieldMapper` so we can bind to it. This is nearly as easy as struct tags, doesn't require reflection, and is more flexible:
+Usage example
+--------------
 
 ```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/mholt/binding"
+)
+
+// Define types to hold request data; you can also decorate
+// them with struct tags for JSON deserialization.
+// (For a convenient way to convert JSON to Go structs,
+// see: http://mholt.github.io/json-to-go)
+type (
+	ContactForm struct {
+		User struct {
+			ID   int
+			Name string
+		}
+		Email   string
+		Message string
+	}
+)
+
+// Pointer receiver is vital here
 func (cf *ContactForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
-		"user_id": &cf.UserID,
+		"user_id": &cf.User.ID,
+		"name":    &cf.User.Name,
 		"email":   &cf.Email,
 		"message": binding.Field{
 			Target:   &cf.Message,
 			Required: true,
-		}
+		},
 	}
 }
-```
 
-Notice that "message" was mapped differently. To add properties to a field, we use `binding.Field`. Otherwise, it is not necessary.
+// You may optionally implement the binding.Validator interface
+// for custom data validation
+func (cf ContactForm) Validate(errors binding.Errors, req *http.Request) binding.Errors {
+	if cf.Message == "Go needs generics" {
+		errors = append(errors, binding.Error{
+			FieldNames:     []string{"message"},
+			Classification: "ComplaintError",
+			Message:        "Go has generics. They're called interfaces.",
+		})
+	}
+	return errors
+}
 
-Then in your HTTP handler, you can use `binding.Bind`:
-
-```go
+// Now data binding, validation, and error handling is taken care of while
+// keeping your application handler clean and simple.
 func handler(resp http.ResponseWriter, req *http.Request) {
 	contactForm := new(ContactForm)
-	binding.Bind(req, contactForm)
-
-	fmt.Fprintf(resp, "Message from: %s", contactForm.Email)
-}
-```
-
-
-Validation
------------
-
-Validating the data is supported out-of-the-box. Just implement the `binding.Validator` interface on your type:
-
-```go
-func (cf ContactForm) Validate(errs binding.Errors, req *http.Request) binding.Errors {
-	if len(cf.Message) < 5 {
-		errs.Add([]string{"message"}, "LengthError", "Message should be at least 5 characters")
+	errs := binding.Bind(req, contactForm)
+	if errs.Handle(resp) {
+		return
 	}
-	return errs
+	fmt.Fprintf(resp, "From:    %s\n", contactForm.User.Name)
+	fmt.Fprintf(resp, "Message: %s\n", contactForm.Message)
+}
+
+func main() {
+	http.HandleFunc("/contact", handler)
+	http.ListenAndServe(":3000", nil)
 }
 ```
-
-Your errors will be combined with the ones produced by `Form` or `Json` deserializers.
 
 
 
@@ -81,25 +97,24 @@ Error Handling
 `binding.Bind()` and the other deserializers return errors. You don't have to use them, but the `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
 
 ```go
-errs := binding.Bind(req, contactForm)
-if errs.Handle(resp) {
+if binding.Bind(req, contactForm).Handle(resp) {
 	return
 }
 ```
 
-As you can see, if `errs.Handle()` wrote errors to the response, your handler may gracefully exit.
+As you can see, if `.Handle()` wrote errors to the response, your handler may gracefully exit.
 
 
 
 
-Supported types
-----------------
+Supported types (forms)
+------------------------
 
-The following list is for form deserialization. (JSON requests are delegated to `encoding/json` so any type that can be marshalled/unmarshalled is supported.)
+The following types are supported in form deserialization. (JSON requests are delegated to `encoding/json`.)
 
-- uint, uint8, uint16, uint32, uint64
-- int, int8, int16, int32, int64
-- float32, float64
-- bool
-- string
-- time.Time
+- uint, []uint, uint8, uint16, uint32, uint64
+- int, []int, int8, int16, int32, int64
+- float32, []float32, float64, []float64
+- bool, []bool
+- string, []string
+- time.Time, []time.Time

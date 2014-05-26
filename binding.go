@@ -1,3 +1,6 @@
+// Package binding deserializes data from HTTP requests into a struct
+// ready for your application to use (without reflection). It also
+// facilitates data validation and error handling.
 package binding
 
 import (
@@ -56,9 +59,9 @@ func Form(req *http.Request, userStruct FieldMapper) Errors {
 
 	fm := userStruct.FieldMap()
 	for fieldName, fieldPointer := range fm {
-		str := req.Form.Get(fieldName)
+		strs := req.Form[fieldName]
 
-		if str == "" {
+		if len(strs) == 0 {
 			continue
 		}
 
@@ -74,73 +77,115 @@ func Form(req *http.Request, userStruct FieldMapper) Errors {
 		}
 
 		if fieldSpec.Binder != nil {
-			fieldSpec.Binder(str, &errs)
+			errs = append(errs, fieldSpec.Binder(strs, errs)...)
 			continue
 		}
 
 		switch t := fieldPointer.(type) {
 		case *uint8:
-			val, err := strconv.ParseUint(str, 10, 8)
+			val, err := strconv.ParseUint(strs[0], 10, 8)
 			errorHandler(err)
 			*t = uint8(val)
 		case *uint16:
-			val, err := strconv.ParseUint(str, 10, 16)
+			val, err := strconv.ParseUint(strs[0], 10, 16)
 			errorHandler(err)
 			*t = uint16(val)
 		case *uint32:
-			val, err := strconv.ParseUint(str, 10, 32)
+			val, err := strconv.ParseUint(strs[0], 10, 32)
 			errorHandler(err)
 			*t = uint32(val)
 		case *uint64:
-			val, err := strconv.ParseUint(str, 10, 64)
+			val, err := strconv.ParseUint(strs[0], 10, 64)
 			errorHandler(err)
 			*t = val
 		case *int8:
-			val, err := strconv.ParseInt(str, 10, 8)
+			val, err := strconv.ParseInt(strs[0], 10, 8)
 			errorHandler(err)
 			*t = int8(val)
 		case *int16:
-			val, err := strconv.ParseInt(str, 10, 16)
+			val, err := strconv.ParseInt(strs[0], 10, 16)
 			errorHandler(err)
 			*t = int16(val)
 		case *int32:
-			val, err := strconv.ParseInt(str, 10, 32)
+			val, err := strconv.ParseInt(strs[0], 10, 32)
 			errorHandler(err)
 			*t = int32(val)
 		case *int64:
-			val, err := strconv.ParseInt(str, 10, 64)
+			val, err := strconv.ParseInt(strs[0], 10, 64)
 			errorHandler(err)
 			*t = val
 		case *float32:
-			val, err := strconv.ParseFloat(str, 32)
+			val, err := strconv.ParseFloat(strs[0], 32)
 			errorHandler(err)
 			*t = float32(val)
+		case *[]float32:
+			for _, str := range strs {
+				val, err := strconv.ParseFloat(str, 32)
+				errorHandler(err)
+				*t = append(*t, float32(val))
+			}
 		case *float64:
-			val, err := strconv.ParseFloat(str, 64)
+			val, err := strconv.ParseFloat(strs[0], 64)
 			errorHandler(err)
 			*t = val
+		case *[]float64:
+			for _, str := range strs {
+				val, err := strconv.ParseFloat(str, 64)
+				errorHandler(err)
+				*t = append(*t, val)
+			}
 		case *uint:
-			val, err := strconv.ParseUint(str, 10, 0)
+			val, err := strconv.ParseUint(strs[0], 10, 0)
 			errorHandler(err)
 			*t = uint(val)
+		case *[]uint:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 0)
+				errorHandler(err)
+				*t = append(*t, uint(val))
+			}
 		case *int:
-			val, err := strconv.ParseInt(str, 10, 0)
+			val, err := strconv.ParseInt(strs[0], 10, 0)
 			errorHandler(err)
 			*t = int(val)
+		case *[]int:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 0)
+				errorHandler(err)
+				*t = append(*t, int(val))
+			}
 		case *bool:
-			val, err := strconv.ParseBool(str)
+			val, err := strconv.ParseBool(strs[0])
 			errorHandler(err)
 			*t = val
+		case *[]bool:
+			for _, str := range strs {
+				val, err := strconv.ParseBool(str)
+				errorHandler(err)
+				*t = append(*t, val)
+			}
 		case *string:
-			*t = str
+			*t = strs[0]
+		case *[]string:
+			*t = strs
 		case *time.Time:
 			timeFormat := TimeFormat
 			if fieldSpec.TimeFormat != "" {
 				timeFormat = fieldSpec.TimeFormat
 			}
-			val, err := time.Parse(timeFormat, str)
+			val, err := time.Parse(timeFormat, strs[0])
 			errorHandler(err)
 			*t = val
+		case *[]time.Time:
+			timeFormat := TimeFormat
+			if fieldSpec.TimeFormat != "" {
+				timeFormat = fieldSpec.TimeFormat
+			}
+			for _, str := range strs {
+				val, err := time.Parse(timeFormat, str)
+				errorHandler(err)
+				*t = append(*t, val)
+			}
 		default:
 			errorHandler(errors.New("Field type is unsupported by the application"))
 		}
@@ -248,28 +293,56 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 					if *t == 0 {
 						addRequiredError()
 					}
+				case *[]float32:
+					if len(*t) == 0 {
+						addRequiredError()
+					}
 				case *float64:
 					if *t == 0 {
+						addRequiredError()
+					}
+				case *[]float64:
+					if len(*t) == 0 {
 						addRequiredError()
 					}
 				case *uint:
 					if *t == 0 {
 						addRequiredError()
 					}
+				case *[]uint:
+					if len(*t) == 0 {
+						addRequiredError()
+					}
 				case *int:
 					if *t == 0 {
+						addRequiredError()
+					}
+				case *[]int:
+					if len(*t) == 0 {
 						addRequiredError()
 					}
 				case *bool:
 					if !*t == false {
 						addRequiredError()
 					}
+				case *[]bool:
+					if len(*t) == 0 {
+						addRequiredError()
+					}
 				case *string:
 					if *t == "" {
 						addRequiredError()
 					}
+				case *[]string:
+					if len(*t) == 0 {
+						addRequiredError()
+					}
 				case *time.Time:
 					if t.IsZero() {
+						addRequiredError()
+					}
+				case *[]time.Time:
+					if len(*t) == 0 {
 						addRequiredError()
 					}
 				}
@@ -285,24 +358,33 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 }
 
 type (
-	// Only types that are FieldMappers can be used to bind requests.
+	// Only types that are FieldMappers can have request data deserialized into them.
 	FieldMapper interface {
-
 		// FieldMap returns a map that keys field names from the request
 		// to pointers into which the values will be deserialized.
 		FieldMap() FieldMap
 	}
 
-	// FieldMap is a map of field names in the request to pointers into
+	// FieldMap is a map of field names from the request to pointers into
 	// which the values will be deserialized.
 	FieldMap map[string]interface{}
 
-	// Field describes the properties of a field.
+	// Field describes the properties of a struct field.
 	Field struct {
-		Target     interface{}
-		Required   bool
+		// Target is the struct field to deserialize into.
+		Target interface{}
+
+		// Required indicates whether the field is required. A required
+		// field that deserializes into the zero value for that type
+		// will generate an error.
+		Required bool
+
+		// TimeFormat specifies the time format for time.Time fields.
 		TimeFormat string
-		Binder     func(string, *Errors)
+
+		// Binder is a function that converts the incoming request value(s)
+		// to the field type
+		Binder func([]string, Errors) Errors
 	}
 
 	// Validator can be implemented by your type to handle some

@@ -51,17 +51,31 @@ func TestValidate(t *testing.T) {
 
 		Convey("float32", nil)
 
+		Convey("[]float32", nil)
+
 		Convey("float64", nil)
+
+		Convey("[]float64", nil)
 
 		Convey("uint", nil)
 
+		Convey("[]uint", nil)
+
 		Convey("int", nil)
+
+		Convey("[]int", nil)
 
 		Convey("bool", nil)
 
+		Convey("[]bool", nil)
+
 		Convey("string", nil)
 
+		Convey("[]string", nil)
+
 		Convey("time.Time", nil)
+
+		Convey("[]time.Time", nil)
 
 	})
 
