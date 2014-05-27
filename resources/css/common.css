@@ -36,7 +36,7 @@ code {
 code.block {
 	display: block;
 	line-height: 1.4em;
-	overflow: scroll;
+	overflow: auto;
 	padding: 10px;
 	tab-size: 4;
 }
