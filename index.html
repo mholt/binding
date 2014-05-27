@@ -166,7 +166,7 @@ if errs.Handle(response) {
 				</p>
 			<code class="block">func loginHandler(resp http.ResponseWriter, req *http.Request) {
     loginForm := new(LoginForm)
-    errs := binding.Bind(req, contactForm)
+    errs := binding.Bind(req, loginForm)
     if errs.Handle(resp) {
         return
     }
