@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -57,153 +58,12 @@ func Form(req *http.Request, userStruct FieldMapper) Errors {
 		return errs
 	}
 
-	fm := userStruct.FieldMap()
-
-	for fieldPointer, fieldNameOrSpec := range fm {
-
-		fieldName, _, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
-
-		strs := req.Form[fieldName]
-		if len(strs) == 0 {
-			continue
-		}
-
-		if binder, ok := fieldPointer.(Binder); ok {
-			errs = binder.Bind(strs, errs)
-			continue
-		}
-
-		errorHandler := func(err error) {
-			if err != nil {
-				errs.Add([]string{fieldName}, TypeError, err.Error())
-			}
-		}
-
-		if fieldSpec.Binder != nil {
-			errs = fieldSpec.Binder(strs, errs)
-			continue
-		}
-
-		switch t := fieldPointer.(type) {
-		case *uint8:
-			val, err := strconv.ParseUint(strs[0], 10, 8)
-			errorHandler(err)
-			*t = uint8(val)
-		case *uint16:
-			val, err := strconv.ParseUint(strs[0], 10, 16)
-			errorHandler(err)
-			*t = uint16(val)
-		case *uint32:
-			val, err := strconv.ParseUint(strs[0], 10, 32)
-			errorHandler(err)
-			*t = uint32(val)
-		case *uint64:
-			val, err := strconv.ParseUint(strs[0], 10, 64)
-			errorHandler(err)
-			*t = val
-		case *int8:
-			val, err := strconv.ParseInt(strs[0], 10, 8)
-			errorHandler(err)
-			*t = int8(val)
-		case *int16:
-			val, err := strconv.ParseInt(strs[0], 10, 16)
-			errorHandler(err)
-			*t = int16(val)
-		case *int32:
-			val, err := strconv.ParseInt(strs[0], 10, 32)
-			errorHandler(err)
-			*t = int32(val)
-		case *int64:
-			val, err := strconv.ParseInt(strs[0], 10, 64)
-			errorHandler(err)
-			*t = val
-		case *float32:
-			val, err := strconv.ParseFloat(strs[0], 32)
-			errorHandler(err)
-			*t = float32(val)
-		case *[]float32:
-			for _, str := range strs {
-				val, err := strconv.ParseFloat(str, 32)
-				errorHandler(err)
-				*t = append(*t, float32(val))
-			}
-		case *float64:
-			val, err := strconv.ParseFloat(strs[0], 64)
-			errorHandler(err)
-			*t = val
-		case *[]float64:
-			for _, str := range strs {
-				val, err := strconv.ParseFloat(str, 64)
-				errorHandler(err)
-				*t = append(*t, val)
-			}
-		case *uint:
-			val, err := strconv.ParseUint(strs[0], 10, 0)
-			errorHandler(err)
-			*t = uint(val)
-		case *[]uint:
-			for _, str := range strs {
-				val, err := strconv.ParseUint(str, 10, 0)
-				errorHandler(err)
-				*t = append(*t, uint(val))
-			}
-		case *int:
-			val, err := strconv.ParseInt(strs[0], 10, 0)
-			errorHandler(err)
-			*t = int(val)
-		case *[]int:
-			for _, str := range strs {
-				val, err := strconv.ParseInt(str, 10, 0)
-				errorHandler(err)
-				*t = append(*t, int(val))
-			}
-		case *bool:
-			val, err := strconv.ParseBool(strs[0])
-			errorHandler(err)
-			*t = val
-		case *[]bool:
-			for _, str := range strs {
-				val, err := strconv.ParseBool(str)
-				errorHandler(err)
-				*t = append(*t, val)
-			}
-		case *string:
-			*t = strs[0]
-		case *[]string:
-			*t = strs
-		case *time.Time:
-			timeFormat := TimeFormat
-			if fieldSpec.TimeFormat != "" {
-				timeFormat = fieldSpec.TimeFormat
-			}
-			val, err := time.Parse(timeFormat, strs[0])
-			errorHandler(err)
-			*t = val
-		case *[]time.Time:
-			timeFormat := TimeFormat
-			if fieldSpec.TimeFormat != "" {
-				timeFormat = fieldSpec.TimeFormat
-			}
-			for _, str := range strs {
-				val, err := time.Parse(timeFormat, str)
-				errorHandler(err)
-				*t = append(*t, val)
-			}
-		default:
-			errorHandler(errors.New("Field type is unsupported by the application"))
-		}
-
-	}
-
-	errs = append(errs, Validate(req, userStruct)...)
-
-	return errs
+	return bindForm(req, userStruct, req.Form, nil, errs)
 }
 
-// MultipartForm reads a multipart form request and deserializes its data into
-// a struct you provide. It then calls Form to get the rest of the form data
-// out of the request.
-// TODO: This implementation is not complete yet
+// MultipartForm reads a multipart form request and deserializes its data and
+// files into a struct you provide. Files should be deserialized into
+// *multipart.FileHeader fields.
 func MultipartForm(req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
@@ -211,15 +71,17 @@ func MultipartForm(req *http.Request, userStruct FieldMapper) Errors {
 	if err != nil {
 		errs.Add([]string{}, DeserializationError, err.Error())
 		return errs
-	} else {
-		form, parseErr := multipartReader.ReadForm(MaxMemory)
-		if parseErr != nil {
-			errs.Add([]string{}, DeserializationError, parseErr.Error())
-			return errs
-		}
-		req.MultipartForm = form
 	}
-	return Form(req, userStruct)
+
+	form, parseErr := multipartReader.ReadForm(MaxMemory)
+	if parseErr != nil {
+		errs.Add([]string{}, DeserializationError, parseErr.Error())
+		return errs
+	}
+
+	req.MultipartForm = form
+
+	return bindForm(req, userStruct, req.MultipartForm.Value, req.MultipartForm.File, errs)
 }
 
 // Json deserializes a JSON request body into a struct you specify
@@ -361,6 +223,165 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 	if validator, ok := userStruct.(Validator); ok {
 		errs = validator.Validate(req, errs)
 	}
+
+	return errs
+}
+
+func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]string,
+	formFile map[string][]*multipart.FileHeader, errs Errors) Errors {
+
+	fm := userStruct.FieldMap()
+
+	for fieldPointer, fieldNameOrSpec := range fm {
+
+		fieldName, _, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
+		_, isFile := fieldPointer.(**multipart.FileHeader)
+		_, isFileSlice := fieldPointer.(*[]**multipart.FileHeader)
+		strs := formData[fieldName]
+
+		if !isFile && !isFileSlice {
+			if len(strs) == 0 {
+				continue
+			}
+			if binder, ok := fieldPointer.(Binder); ok {
+				errs = binder.Bind(strs, errs)
+				continue
+			}
+		}
+
+		errorHandler := func(err error) {
+			if err != nil {
+				errs.Add([]string{fieldName}, TypeError, err.Error())
+			}
+		}
+
+		if fieldSpec.Binder != nil {
+			errs = fieldSpec.Binder(strs, errs)
+			continue
+		}
+
+		switch t := fieldPointer.(type) {
+		case *uint8:
+			val, err := strconv.ParseUint(strs[0], 10, 8)
+			errorHandler(err)
+			*t = uint8(val)
+		case *uint16:
+			val, err := strconv.ParseUint(strs[0], 10, 16)
+			errorHandler(err)
+			*t = uint16(val)
+		case *uint32:
+			val, err := strconv.ParseUint(strs[0], 10, 32)
+			errorHandler(err)
+			*t = uint32(val)
+		case *uint64:
+			val, err := strconv.ParseUint(strs[0], 10, 64)
+			errorHandler(err)
+			*t = val
+		case *int8:
+			val, err := strconv.ParseInt(strs[0], 10, 8)
+			errorHandler(err)
+			*t = int8(val)
+		case *int16:
+			val, err := strconv.ParseInt(strs[0], 10, 16)
+			errorHandler(err)
+			*t = int16(val)
+		case *int32:
+			val, err := strconv.ParseInt(strs[0], 10, 32)
+			errorHandler(err)
+			*t = int32(val)
+		case *int64:
+			val, err := strconv.ParseInt(strs[0], 10, 64)
+			errorHandler(err)
+			*t = val
+		case *float32:
+			val, err := strconv.ParseFloat(strs[0], 32)
+			errorHandler(err)
+			*t = float32(val)
+		case *[]float32:
+			for _, str := range strs {
+				val, err := strconv.ParseFloat(str, 32)
+				errorHandler(err)
+				*t = append(*t, float32(val))
+			}
+		case *float64:
+			val, err := strconv.ParseFloat(strs[0], 64)
+			errorHandler(err)
+			*t = val
+		case *[]float64:
+			for _, str := range strs {
+				val, err := strconv.ParseFloat(str, 64)
+				errorHandler(err)
+				*t = append(*t, val)
+			}
+		case *uint:
+			val, err := strconv.ParseUint(strs[0], 10, 0)
+			errorHandler(err)
+			*t = uint(val)
+		case *[]uint:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 0)
+				errorHandler(err)
+				*t = append(*t, uint(val))
+			}
+		case *int:
+			val, err := strconv.ParseInt(strs[0], 10, 0)
+			errorHandler(err)
+			*t = int(val)
+		case *[]int:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 0)
+				errorHandler(err)
+				*t = append(*t, int(val))
+			}
+		case *bool:
+			val, err := strconv.ParseBool(strs[0])
+			errorHandler(err)
+			*t = val
+		case *[]bool:
+			for _, str := range strs {
+				val, err := strconv.ParseBool(str)
+				errorHandler(err)
+				*t = append(*t, val)
+			}
+		case *string:
+			*t = strs[0]
+		case *[]string:
+			*t = strs
+		case *time.Time:
+			timeFormat := TimeFormat
+			if fieldSpec.TimeFormat != "" {
+				timeFormat = fieldSpec.TimeFormat
+			}
+			val, err := time.Parse(timeFormat, strs[0])
+			errorHandler(err)
+			*t = val
+		case *[]time.Time:
+			timeFormat := TimeFormat
+			if fieldSpec.TimeFormat != "" {
+				timeFormat = fieldSpec.TimeFormat
+			}
+			for _, str := range strs {
+				val, err := time.Parse(timeFormat, str)
+				errorHandler(err)
+				*t = append(*t, val)
+			}
+		case **multipart.FileHeader:
+			if files, ok := formFile[fieldName]; ok {
+				*t = files[0]
+			}
+		case *[]**multipart.FileHeader:
+			if files, ok := formFile[fieldName]; ok {
+				for _, file := range files {
+					*t = append(*t, &file)
+				}
+			}
+		default:
+			errorHandler(errors.New("Field type is unsupported by the application"))
+		}
+
+	}
+
+	errs = append(errs, Validate(req, userStruct)...)
 
 	return errs
 }

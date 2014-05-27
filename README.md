@@ -63,7 +63,7 @@ func (cf *ContactForm) FieldMap() binding.FieldMap {
 	}
 }
 
-// Now your handlers can stay clean and simple.
+// Now your handlers can stay clean and simple
 func handler(resp http.ResponseWriter, req *http.Request) {
 	contactForm := new(ContactForm)
 	errs := binding.Bind(req, contactForm)
@@ -164,3 +164,4 @@ The following types are supported in form deserialization by default. (JSON requ
 - bool, []bool
 - string, []string
 - time.Time, []time.Time
+- *multipart.FileHeader, []*multipart.FileHeader
