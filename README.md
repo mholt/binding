@@ -45,16 +45,14 @@ import (
 // them with struct tags for JSON deserialization.
 // (For a convenient way to convert JSON to Go structs,
 // see: http://mholt.github.io/json-to-go)
-type (
-	ContactForm struct {
-		User struct {
-			ID   int
-			Name string
-		}
-		Email   string
-		Message string
+type ContactForm struct {
+	User struct {
+		ID   int
+		Name string
 	}
-)
+	Email   string
+	Message string
+}
 
 // Pointer receiver is vital here
 func (cf *ContactForm) FieldMap() binding.FieldMap {
