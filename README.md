@@ -1,4 +1,4 @@
-<img src="http://mholt.github.io/binding/resources/images/binding-sm.png" height="250" alt="binding is reflectionless data binding for Go">
+[<img src="http://mholt.github.io/binding/resources/images/binding-sm.png" height="250" alt="binding is reflectionless data binding for Go"></a>](http://mholt.github.io/binding)
 
 
 binding
