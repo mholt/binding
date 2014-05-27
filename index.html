@@ -68,34 +68,35 @@ if errs.Handle(response) {
 <span class="p">)</span>
 
 <span class="c1">// First define a type to hold the data</span>
+<span class="c1">// (If the data comes from JSON, see: http://mholt.github.io/json-to-go)</span>
 <span class="kd">type</span> <span class="nx">ContactForm</span> <span class="kd">struct</span> <span class="p">{</span>
     <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
-        <span class="nx">ID</span>  <span class="kt">int</span>
+        <span class="nx">ID</span> <span class="kt">int</span>
     <span class="p">}</span>
     <span class="nx">Email</span>   <span class="kt">string</span>
     <span class="nx">Message</span> <span class="kt">string</span>
 <span class="p">}</span>
 
-<span class="c1">// Then provide a field mapping</span>
+<span class="c1">// Then provide a field mapping (pointer receiver is vital)</span>
 <span class="kd">func</span> <span class="p">(</span><span class="nx">cf</span> <span class="o">*</span><span class="nx">ContactForm</span><span class="p">)</span> <span class="nx">FieldMap</span><span class="p">()</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">FieldMap</span> <span class="p">{</span>
     <span class="k">return</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">FieldMap</span><span class="p">{</span>
-        <span class="s">"user_id"</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">User</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
-        <span class="s">"email"</span><span class="p">:</span>   <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">Email</span><span class="p">,</span>
-        <span class="s">"message"</span><span class="p">:</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">Field</span><span class="p">{</span>
-            <span class="nx">Target</span><span class="p">:</span>   <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">Message</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">User</span><span class="p">.</span><span class="nx">ID</span><span class="p">:</span> <span class="s">"user_id"</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">Email</span><span class="p">:</span>   <span class="s">"email"</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">Message</span><span class="p">:</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">Field</span><span class="p">{</span>
+            <span class="nx">Form</span><span class="p">:</span>     <span class="s">"message"</span><span class="p">,</span>
             <span class="nx">Required</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
         <span class="p">},</span>
     <span class="p">}</span>
 <span class="p">}</span>
 
-<span class="c1">// Now your handlers can stay clean and simple</span>
+<span class="c1">// Now your handlers can stay clean and simple.</span>
 <span class="kd">func</span> <span class="nx">handler</span><span class="p">(</span><span class="nx">resp</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">req</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">contactForm</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">ContactForm</span><span class="p">)</span>
     <span class="nx">errs</span> <span class="o">:=</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">Bind</span><span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">contactForm</span><span class="p">)</span>
     <span class="k">if</span> <span class="nx">errs</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="nx">resp</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">return</span>
     <span class="p">}</span>
-    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintf</span><span class="p">(</span><span class="nx">resp</span><span class="p">,</span> <span class="s">"   From: %d\n"</span><span class="p">,</span> <span class="nx">contactForm</span><span class="p">.</span><span class="nx">User</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintf</span><span class="p">(</span><span class="nx">resp</span><span class="p">,</span> <span class="s">"From:    %d\n"</span><span class="p">,</span> <span class="nx">contactForm</span><span class="p">.</span><span class="nx">User</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
     <span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintf</span><span class="p">(</span><span class="nx">resp</span><span class="p">,</span> <span class="s">"Message: %s\n"</span><span class="p">,</span> <span class="nx">contactForm</span><span class="p">.</span><span class="nx">Message</span><span class="p">)</span>
 <span class="p">}</span>
 
@@ -144,8 +145,8 @@ if errs.Handle(response) {
 				</p>
 			<code class="block">func (l *LoginForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
-		"user_name": &amp;l.Username,
-		"password":  &amp;l.Password,
+		&amp;l.Username: "user_name",
+		&amp;l.Password: "password",
 	}
 }</code>
 			</div>
@@ -213,7 +214,7 @@ if errs.Handle(response) {
 
 				<h4>What about performance?</h4>
 				<p>
-					What about it? I mean, you can run benchmarks if you want. As with anything else, if you need the absolutest best performance ever invented, don't use a general-purpose library like this. Instead, code up some highly optimized routine yourself for your specific use case. For everyone else, we're talking about microseconds of difference. Not a big deal in most cases.
+					What about it? I mean, you can run benchmarks if you want. As with anything else, if you need the absolutest best performance ever invented, don't use a general-purpose library like this. Instead, code up some highly optimized routine yourself for your specific use case. For regular use, we're talking about a difference of microseconds... not a big deal in most cases.
 				</p>
 
 				<h4>How did this project start?</h4>
