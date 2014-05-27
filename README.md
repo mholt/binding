@@ -41,41 +41,36 @@ import (
 	"github.com/mholt/binding"
 )
 
-// Define types to hold request data; you can also decorate
-// them with struct tags for JSON deserialization.
-// (For a convenient way to convert JSON to Go structs,
-// see: http://mholt.github.io/json-to-go)
+// First define a type to hold the data
+// (If the data comes from JSON, see: http://mholt.github.io/json-to-go)
 type ContactForm struct {
 	User struct {
-		ID   int
-		Name string
+		ID int
 	}
 	Email   string
 	Message string
 }
 
-// Pointer receiver is vital here
+// Then provide a field mapping (pointer receiver is vital)
 func (cf *ContactForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
-		"user_id": &cf.User.ID,
-		"name":    &cf.User.Name,
-		"email":   &cf.Email,
-		"message": binding.Field{
-			Target:   &cf.Message,
+		&cf.User.ID: "user_id",
+		&cf.Email:   "email",
+		&cf.Message: binding.Field{
+			Form:     "message",
 			Required: true,
 		},
 	}
 }
 
-// Now data binding, validation, and error handling is taken care of while
-// keeping your application handler clean and simple.
+// Now your handlers can stay clean and simple.
 func handler(resp http.ResponseWriter, req *http.Request) {
 	contactForm := new(ContactForm)
 	errs := binding.Bind(req, contactForm)
 	if errs.Handle(resp) {
 		return
 	}
-	fmt.Fprintf(resp, "From:    %s\n", contactForm.User.Name)
+	fmt.Fprintf(resp, "From:    %d\n", contactForm.User.ID)
 	fmt.Fprintf(resp, "Message: %s\n", contactForm.Message)
 }
 
@@ -89,7 +84,7 @@ func main() {
 Custom data validation
 -----------------------
 
-You may optionally have your type implement the `binding.Validator` interface to perform your own data validation.
+You may optionally have your type implement the `binding.Validator` interface to perform your own data validation. The `.Validate()` method is called after the struct is populated.
 
 ```go
 func (cf ContactForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
@@ -109,7 +104,7 @@ func (cf ContactForm) Validate(req *http.Request, errs binding.Errors) binding.E
 Error Handling
 ---------------
 
-`binding.Bind()` and the other deserializers return errors. You don't have to use them, but the `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
+`binding.Bind()` and each deserializer returns errors. You don't have to use them, but the `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
 
 ```go
 if binding.Bind(req, contactForm).Handle(resp) {
@@ -117,14 +112,26 @@ if binding.Bind(req, contactForm).Handle(resp) {
 }
 ```
 
-As you can see, if `.Handle()` wrote errors to the response, your handler may gracefully exit.
+As you can see, if `.Handle(resp)` wrote errors to the response, your handler may gracefully exit.
 
 
 
 Binding custom types
 ---------------------
 
-You can bind form data into custom types by using a `Binder` func in your field map. Here's a contrived example that binds an integer (not necessary, but you get the idea):
+For types you've defined, you can bind form data to it by implementing the `Binder` interface. Here's a contrived example:
+
+
+```go
+type MyType map[string]string
+
+func (t *MyType) Bind(strVals []string, errs binding.Errors) binding.Errors {
+	t["formData"] = strVals[0]
+	return errs
+}
+```
+
+If you can't add a method to the type, you can still specify a `Binder` func in the field spec. Here's a contrived example that binds an integer (not necessary, but you get the idea):
 
 ```go
 func (t *MyType) FieldMap() binding.FieldMap {

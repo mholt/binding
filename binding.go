@@ -58,16 +58,19 @@ func Form(req *http.Request, userStruct FieldMapper) Errors {
 	}
 
 	fm := userStruct.FieldMap()
-	for fieldName, fieldPointer := range fm {
-		strs := req.Form[fieldName]
 
+	for fieldPointer, fieldNameOrSpec := range fm {
+
+		fieldName, _, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
+
+		strs := req.Form[fieldName]
 		if len(strs) == 0 {
 			continue
 		}
 
-		fieldSpec, fieldHasSpec := fieldPointer.(Field)
-		if fieldHasSpec {
-			fieldPointer = fieldSpec.Target
+		if binder, ok := fieldPointer.(Binder); ok {
+			errs = binder.Bind(strs, errs)
+			continue
 		}
 
 		errorHandler := func(err error) {
@@ -189,6 +192,7 @@ func Form(req *http.Request, userStruct FieldMapper) Errors {
 		default:
 			errorHandler(errors.New("Field type is unsupported by the application"))
 		}
+
 	}
 
 	errs = append(errs, Validate(req, userStruct)...)
@@ -249,102 +253,106 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 
 	fm := userStruct.FieldMap()
 
-	for fieldName, fieldSpec := range fm {
+	for fieldPointer, fieldNameOrSpec := range fm {
+		fieldName, fieldHasSpec, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
+
+		if !fieldHasSpec {
+			continue
+		}
+
 		addRequiredError := func() {
 			errs.Add([]string{fieldName}, RequiredError, "Required")
 		}
 
-		if field, ok := fieldSpec.(Field); ok {
-			if field.Required {
-				switch t := field.Target.(type) {
-				case *uint8:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *uint16:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *uint32:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *uint64:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *int8:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *int16:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *int32:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *int64:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *float32:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *[]float32:
-					if len(*t) == 0 {
-						addRequiredError()
-					}
-				case *float64:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *[]float64:
-					if len(*t) == 0 {
-						addRequiredError()
-					}
-				case *uint:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *[]uint:
-					if len(*t) == 0 {
-						addRequiredError()
-					}
-				case *int:
-					if *t == 0 {
-						addRequiredError()
-					}
-				case *[]int:
-					if len(*t) == 0 {
-						addRequiredError()
-					}
-				case *bool:
-					if !*t == false {
-						addRequiredError()
-					}
-				case *[]bool:
-					if len(*t) == 0 {
-						addRequiredError()
-					}
-				case *string:
-					if *t == "" {
-						addRequiredError()
-					}
-				case *[]string:
-					if len(*t) == 0 {
-						addRequiredError()
-					}
-				case *time.Time:
-					if t.IsZero() {
-						addRequiredError()
-					}
-				case *[]time.Time:
-					if len(*t) == 0 {
-						addRequiredError()
-					}
+		if fieldSpec.Required {
+			switch t := fieldPointer.(type) {
+			case *uint8:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *uint16:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *uint32:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *uint64:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *int8:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *int16:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *int32:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *int64:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *float32:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *[]float32:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
+			case *float64:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *[]float64:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
+			case *uint:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *[]uint:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
+			case *int:
+				if *t == 0 {
+					addRequiredError()
+				}
+			case *[]int:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
+			case *bool:
+				if !*t == false {
+					addRequiredError()
+				}
+			case *[]bool:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
+			case *string:
+				if *t == "" {
+					addRequiredError()
+				}
+			case *[]string:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
+			case *time.Time:
+				if t.IsZero() {
+					addRequiredError()
+				}
+			case *[]time.Time:
+				if len(*t) == 0 {
+					addRequiredError()
 				}
 			}
 		}
@@ -357,6 +365,20 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 	return errs
 }
 
+func fieldNameAndSpec(fieldNameOrSpec interface{}) (string, bool, Field) {
+	var fieldName string
+
+	fieldSpec, fieldHasSpec := fieldNameOrSpec.(Field)
+
+	if fieldHasSpec {
+		fieldName = fieldSpec.Form
+	} else if name, ok := fieldNameOrSpec.(string); ok {
+		fieldName = name
+	}
+
+	return fieldName, fieldHasSpec, fieldSpec
+}
+
 type (
 	// Only types that are FieldMappers can have request data deserialized into them.
 	FieldMapper interface {
@@ -365,14 +387,17 @@ type (
 		FieldMap() FieldMap
 	}
 
-	// FieldMap is a map of field names from the request to pointers into
-	// which the values will be deserialized.
-	FieldMap map[string]interface{}
+	// FieldMap is a map of pointers to struct fields -> field names from the request.
+	// The values could also be Field structs to specify metadata about the field.
+	FieldMap map[interface{}]interface{}
 
 	// Field describes the properties of a struct field.
 	Field struct {
 		// Target is the struct field to deserialize into.
-		Target interface{}
+		//Target interface{}
+
+		// Form is the form field name to bind from
+		Form string
 
 		// Required indicates whether the field is required. A required
 		// field that deserializes into the zero value for that type
@@ -383,8 +408,19 @@ type (
 		TimeFormat string
 
 		// Binder is a function that converts the incoming request value(s)
-		// to the field type
+		// to the field type; in other words, this field is populated
+		// by executing this function. Useful when the custom type doesn't
+		// implement the Binder interface.
 		Binder func([]string, Errors) Errors
+	}
+
+	// Binder is an interface which can deserialize itself from a slice of string
+	// coming from the request. Implement this interface so the type can be
+	// populated from form data in HTTP requests.
+	Binder interface {
+		// Bind populates the type with data in []string, which comes from the
+		// HTTP request.
+		Bind([]string, Errors) Errors
 	}
 
 	// Validator can be implemented by your type to handle some
