@@ -3,14 +3,229 @@
 	<head>
 		<title>Binding: Reflectionless data binding for Go's net/http</title>
 		<script src="resources/js/jquery2.1.0.min.js"></script>
-		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css">
+		<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css">
 		<link rel="stylesheet" href="resources/css/unsemantic.css">
 		<link rel="stylesheet" href="resources/css/common.css">
 	</head>
 	<body>
 		<div class="logo">
-			<img src="resources/images/binding.png" title="Binding for Go">
+			<img src="resources/images/binding.png" title="Reflectionless data binding for Go">
 			<h1>Binding</h1>
-			<h2>Reflectionless data binding for Go's net/http</h2>
+			<h2>Reflectionless data binding for Go's <code>net/http</code></h2>
+		</div>
+
+		<div class="grid-container">
+			<div class="grid-33">
+				<h4>What It Does</h4>
+				<ul>
+					<li>Binds <code>http.Request</code> to struct</li>
+					<li>Data validation</li>
+					<li>Error handling</li>
+				</ul>
+			</div>
+			<div class="grid-33">
+				<h4>Why It Helps</h4>
+				<ul>
+					<li>Remove binding, validation, and error handling from your application logic</li>
+					<li>Reads the Content-Type to determine for you how to deserialize</li>
+					<li>No middleware: just a function call</li>
+					<li>Use with Negroni, gocraft/web, std lib, etc.</li>
+				</ul>
+			</div>
+			<div class="grid-33">
+				<h4>How It Looks</h4>
+				<code class="block">myStruct := new(MyStruct)
+errs := binding.Bind(req, myStruct)
+if errs.Handle(response) {
+	return
+}</code>
+			</div>
+
+
+			<div class="prefix-25 grid-50 suffix-25">
+				<div class="links">
+					<a href="https://github.com/mholt/binding"><i class="fa fa-github"></i> GitHub</a>
+					<br><br>
+					<code>$ go get github.com/mholt/binding</code>
+				</div>
+			</div>
+
+		</div>
+
+		<h3>Example</h3>
+
+
+
+
+		<div class="big-code">
+			<code class="block"><span class="kn">package</span> <span class="nx">main</span>
+
+<span class="kn">import</span> <span class="p">(</span>
+    <span class="s">"fmt"</span>
+    <span class="s">"net/http"</span>
+
+    <span class="s">"github.com/mholt/binding"</span>
+<span class="p">)</span>
+
+<span class="c1">// First define a type to hold the data</span>
+<span class="kd">type</span> <span class="nx">ContactForm</span> <span class="kd">struct</span> <span class="p">{</span>
+    <span class="nx">User</span> <span class="kd">struct</span> <span class="p">{</span>
+        <span class="nx">ID</span>  <span class="kt">int</span>
+    <span class="p">}</span>
+    <span class="nx">Email</span>   <span class="kt">string</span>
+    <span class="nx">Message</span> <span class="kt">string</span>
+<span class="p">}</span>
+
+<span class="c1">// Then provide a field mapping</span>
+<span class="kd">func</span> <span class="p">(</span><span class="nx">cf</span> <span class="o">*</span><span class="nx">ContactForm</span><span class="p">)</span> <span class="nx">FieldMap</span><span class="p">()</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">FieldMap</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">FieldMap</span><span class="p">{</span>
+        <span class="s">"user_id"</span><span class="p">:</span> <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">User</span><span class="p">.</span><span class="nx">ID</span><span class="p">,</span>
+        <span class="s">"email"</span><span class="p">:</span>   <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">Email</span><span class="p">,</span>
+        <span class="s">"message"</span><span class="p">:</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">Field</span><span class="p">{</span>
+            <span class="nx">Target</span><span class="p">:</span>   <span class="o">&amp;</span><span class="nx">cf</span><span class="p">.</span><span class="nx">Message</span><span class="p">,</span>
+            <span class="nx">Required</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// Now your handlers can stay clean and simple</span>
+<span class="kd">func</span> <span class="nx">handler</span><span class="p">(</span><span class="nx">resp</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">req</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">contactForm</span> <span class="o">:=</span> <span class="nb">new</span><span class="p">(</span><span class="nx">ContactForm</span><span class="p">)</span>
+    <span class="nx">errs</span> <span class="o">:=</span> <span class="nx">binding</span><span class="p">.</span><span class="nx">Bind</span><span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">contactForm</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">errs</span><span class="p">.</span><span class="nx">Handle</span><span class="p">(</span><span class="nx">resp</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintf</span><span class="p">(</span><span class="nx">resp</span><span class="p">,</span> <span class="s">"   From: %d\n"</span><span class="p">,</span> <span class="nx">contactForm</span><span class="p">.</span><span class="nx">User</span><span class="p">.</span><span class="nx">ID</span><span class="p">)</span>
+    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Fprintf</span><span class="p">(</span><span class="nx">resp</span><span class="p">,</span> <span class="s">"Message: %s\n"</span><span class="p">,</span> <span class="nx">contactForm</span><span class="p">.</span><span class="nx">Message</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span> <span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">http</span><span class="p">.</span><span class="nx">HandleFunc</span><span class="p">(</span><span class="s">"/contact"</span><span class="p">,</span> <span class="nx">handler</span><span class="p">)</span>
+    <span class="nx">http</span><span class="p">.</span><span class="nx">ListenAndServe</span><span class="p">(</span><span class="s">":3000"</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="p">}</span></code>
+		</div>
+
+
+
+		<div class="grid-container">
+			<div class="grid-100">
+				<h3>Usage</h3>
+			</div>
+
+
+			<div class="prefix-20 grid-60 suffix-20">
+				<span class="step">1</span>
+				<span class="step-title">
+					Make a struct to hold the data
+				</span>
+
+				<br>
+
+				<p>
+					Form data doesn't require struct tags, but you can <a href="http://golang.org/pkg/encoding/json/#Marshal">use them for deserializing JSON</a> like usual. (Here's <a href="https://mholt.github.io/json-to-go">a convenient way</a> to convert JSON into a Go struct.)
+				</p>
+			<code class="block">type LoginForm struct {
+	Username string `json:"user_name"`
+	Password string `json:"password"`
+}</code>
+			</div>
+
+
+			<div class="prefix-20 grid-60 suffix-20">
+				<br><br><br>
+
+				<span class="step">2</span>
+				<span class="step-title">
+					Implement the <code>binding.FieldMapper</code> interface
+				</span>
+
+				<p>
+					Field maps are used for form data. If you're only using JSON, you can return an empty field map.
+				</p>
+			<code class="block">func (l *LoginForm) FieldMap() binding.FieldMap {
+	return binding.FieldMap{
+		"user_name": &amp;l.Username,
+		"password":  &amp;l.Password,
+	}
+}</code>
+			</div>
+
+
+
+			<div class="prefix-20 grid-60 suffix-20">
+				<br><br><br>
+
+				<span class="step">3</span>
+				<span class="step-title">
+					Use it in your handler
+				</span>
+
+				<p>
+					New up your struct, bind the request to it, and optionally handle errors. You have lots of freedom in how you use binding.
+				</p>
+			<code class="block">func loginHandler(resp http.ResponseWriter, req *http.Request) {
+    loginForm := new(LoginForm)
+    errs := binding.Bind(req, contactForm)
+    if errs.Handle(resp) {
+        return
+    }
+    // ... application logic here ...
+}</code>
+			<p>
+				This just scratches the surface. See the <a href="https://github.com/mholt/binding/blob/master/README.md">README</a> and <a href="http://godoc.org/github.com/mholt/binding">GoDoc documentation</a> to learn about data validation, error handling, required fields, binding custom types, and everything else.
+			</p>
+			</div>
+		</div>
+
+
+		<h3>FAQ</h3>
+
+		<div class="grid-container">
+			<div class="prefix-20 grid-60 suffix-20">
+				<h4>Hey, this is a lot of work.</h4>
+				<p>
+					What is, mapping fields? Bah. It's the same process as using struct tags but with a greater degree of flexibility: being able to (optionally!) specify required fields, custom binding functions, and metadata all inline with your type, but out of the way of your application logic, is a huge win.
+				</p>
+
+				<h4>Why no reflection?</h4>
+				<p>
+					Reflection has its place, and arguably, data binding is a good use case for reflection. Pretty much every comparable library uses it. In fact, this package borrows from the reflection-heavy <a href="https://github.com/martini-contrib/binding">martini-contrib/binding</a> library. Reflection's downsides are well-known: slow, error-prone, confusing, and facilitates <i>black magic</i>, if you will.
+				</p>
+
+				<p>
+					Okay, computer science isn't "black magic" -- but the obscurity of what is really happening and the delicacy of using <code>reflect</code> motivated a new approach. And that's all this package is: a different approach to data binding. Let idiomatic Go shine in all its glory.
+				</p>
+
+				<h4>But type assertions are reflection...</h4>
+				<p>
+					Okay, kind of. Except they're inherently way safer and easier to use than <code>reflect</code>.
+				</p>
+
+				<h4>...and <code>encoding/json</code> uses reflection!</h4>
+				<p>
+					Ah, yup. Beyond this <code>binding</code> package itself, there are no guarantees what the individual deserializers (other packages) are going to do.
+				</p>
+
+				<h4>What are the goals of this package?</h4>
+				<p>
+					"Keep it lightweight, idiomatic, flexible, and simple, stupid."
+				</p>
+
+				<h4>What about performance?</h4>
+				<p>
+					What about it? I mean, you can run benchmarks if you want. As with anything else, if you need the absolutest best performance ever invented, don't use a general-purpose library like this. Instead, code up some highly optimized routine yourself for your specific use case. For everyone else, we're talking about microseconds of difference. Not a big deal in most cases.
+				</p>
+
+				<h4>How did this project start?</h4>
+				<p>
+					Initially, it was supposed to be a contributed middleware for <a href="https://github.com/codegangsta/negroni">Negroni</a>. However, it quickly became clear that there was no reason to make this package middleware: all you need is a function call. So it became a generalized binding package that can be used anywhere, with nearly any framework or none at all, for nearly any request format.
+				</p>
+			</div>
+		</div>
+		<footer>
+			&copy; 2014. Brought to you by <a href="https://twitter.com/mholt6">Matt Holt</a> and <a href="https://github.com/mholt/binding/graphs/contributors">these contributors</a>.
+		</footer>
+
+
 	</body>
 </html>
