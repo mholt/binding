@@ -123,7 +123,7 @@ if errs.Handle(response) {
 				<br>
 
 				<p>
-					Form data doesn't require struct tags, but you can <a href="http://golang.org/pkg/encoding/json/#Marshal">use them for deserializing JSON</a> like usual. (Here's <a href="https://mholt.github.io/json-to-go">a convenient way</a> to convert JSON into a Go struct.)
+					Form data doesn't require struct tags, but you can <a href="http://golang.org/pkg/encoding/json/#Marshal">use them for deserializing JSON</a> like usual. (<a href="https://mholt.github.io/json-to-go">Here's a convenient way</a> to convert JSON into a Go struct.)
 				</p>
 			<code class="block">type LoginForm struct {
 	Username string `json:"user_name"`
@@ -185,26 +185,30 @@ if errs.Handle(response) {
 			<div class="prefix-20 grid-60 suffix-20">
 				<h4>Hey, this is a lot of work.</h4>
 				<p>
-					What is, mapping fields? Bah. It's the same process as using struct tags but with a greater degree of flexibility: being able to (optionally!) specify required fields, custom binding functions, and metadata all inline with your type, but out of the way of your application logic, is a huge win.
+					What is, mapping fields? Bah. It's the same as using struct tags but with a greater degree of flexibility: being able to (optionally!) specify required fields, custom binding functions, and metadata all inline with your type, but out of the way of your application logic, is a huge win.
 				</p>
 
 				<h4>Why no reflection?</h4>
 				<p>
-					Reflection has its place, and arguably, data binding is a good use case for reflection. Pretty much every comparable library uses it. In fact, this package borrows from the reflection-heavy <a href="https://github.com/martini-contrib/binding">martini-contrib/binding</a> library. Reflection's downsides are well-known: slow, error-prone, confusing, and facilitates <i>black magic</i>, if you will.
+					Reflection has its place, and arguably, data binding is a good use case for reflection. Pretty much every comparable library uses it. In fact, this package borrows ideas from the reflection-heavy <a href="https://github.com/martini-contrib/binding">martini-contrib/binding</a> library. Reflection's downsides are well-known: slow, error-prone, and confusing.
 				</p>
-
 				<p>
-					Okay, computer science isn't "black magic" -- but the obscurity of what is really happening and the delicacy of using <code>reflect</code> motivated a new approach. And that's all this package is: a different approach to data binding. Let idiomatic Go shine in all its glory.
+					The obscurity of what is really happening and the delicacy of using <code>reflect</code> motivated a new approach. And that's all this package is: a different approach to data binding. Let idiomatic Go shine in all its glory, and see what really can be done without having to use the <code>reflect</code> package.
 				</p>
 
 				<h4>But type assertions are reflection...</h4>
 				<p>
-					Okay, kind of. Except they're inherently way safer and easier to use than <code>reflect</code>.
+					<a href="https://groups.google.com/d/msg/golang-nuts/1_myxfyl8Hw/YnC9Mc--QosJ">That's debatable.</a> The Go language by itself does not facilitate run-time reflection. Type switches/assertions are inherently way safer and easier to use than the <code>reflect</code> package, which "<a href="http://golang.org/pkg/reflect/">implements run-time reflection</a>." So anyway, there's no <i>real</i> reflection going on in this package. (Not because reflection is bad, but simply because there is another way.)
 				</p>
 
 				<h4>...and <code>encoding/json</code> uses reflection!</h4>
 				<p>
 					Ah, yup. Beyond this <code>binding</code> package itself, there are no guarantees what the individual deserializers (other packages) are going to do.
+				</p>
+
+				<h4>[anything else about reflection]</h4>
+				<p>
+					Reflection is not the point here. Yes, it's "reflectionless data binding for Go" -- but that's just a description. Instead, don't worry about whether reflection is good or bad for this. Just enjoy clear, idiomatic Go code.
 				</p>
 
 				<h4>What are the goals of this package?</h4>
@@ -220,6 +224,11 @@ if errs.Handle(response) {
 				<h4>How did this project start?</h4>
 				<p>
 					Initially, it was supposed to be a contributed middleware for <a href="https://github.com/codegangsta/negroni">Negroni</a>. However, it quickly became clear that there was no reason to make this package middleware: all you need is a function call. So it became a generalized binding package that can be used anywhere, with nearly any framework or none at all, for nearly any request format.
+				</p>
+
+				<h4>Why isn't this project called "vampire"?</h4>
+				<p>
+					Because there's no black magic here.
 				</p>
 			</div>
 		</div>

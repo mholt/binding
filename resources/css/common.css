@@ -18,6 +18,14 @@ a:hover {
 	text-decoration: none;
 }
 
+i {
+	font-style: italic;
+}
+
+b {
+	font-weight: bold;
+}
+
 code,
 .big-code {
 	background: #F7F7F7;
