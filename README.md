@@ -125,7 +125,7 @@ For types you've defined, you can bind form data to it by implementing the `Bind
 ```go
 type MyType map[string]string
 
-func (t *MyType) Bind(strVals []string, errs binding.Errors) binding.Errors {
+func (t *MyType) Bind(fieldName string, strVals []string, errs binding.Errors) binding.Errors {
 	t["formData"] = strVals[0]
 	return errs
 }
@@ -137,10 +137,10 @@ If you can't add a method to the type, you can still specify a `Binder` func in 
 func (t *MyType) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
 		"number": binding.Field{
-			Binder: func(formVals []string, errs binding.Errors) binding.Errors {
+			Binder: func(fieldName string, formVals []string, errs binding.Errors) binding.Errors {
 				val, err := strconv.Atoi(formVals[0])
 				if err != nil {
-					errs.Add([]string{"id"}, binding.DeserializationError, err.Error())
+					errs.Add([]string{fieldName}, binding.DeserializationError, err.Error())
 				}
 				t.SomeNumber = val
 				return errs
