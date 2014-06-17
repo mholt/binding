@@ -1,8 +1,8 @@
 package binding
 
 import (
-	"testing"
 	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 func TestBind(t *testing.T) {
@@ -49,6 +49,17 @@ func TestBind(t *testing.T) {
 
 		})
 
+		Convey("Missing one required field", t, func() {
+
+			Convey("A Required error should be produced", nil)
+
+		})
+
+		Convey("Missing multiple required fields", t, func() {
+
+			Convey("As many Required errors should be produced", nil)
+
+		})
 	})
 
 }

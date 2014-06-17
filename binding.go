@@ -113,113 +113,6 @@ func Json(req *http.Request, userStruct FieldMapper) Errors {
 func Validate(req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
-	fm := userStruct.FieldMap()
-
-	for fieldPointer, fieldNameOrSpec := range fm {
-		fieldName, fieldHasSpec, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
-
-		if !fieldHasSpec {
-			continue
-		}
-
-		addRequiredError := func() {
-			errs.Add([]string{fieldName}, RequiredError, "Required")
-		}
-
-		if fieldSpec.Required {
-			switch t := fieldPointer.(type) {
-			case *uint8:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *uint16:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *uint32:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *uint64:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *int8:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *int16:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *int32:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *int64:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *float32:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *[]float32:
-				if len(*t) == 0 {
-					addRequiredError()
-				}
-			case *float64:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *[]float64:
-				if len(*t) == 0 {
-					addRequiredError()
-				}
-			case *uint:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *[]uint:
-				if len(*t) == 0 {
-					addRequiredError()
-				}
-			case *int:
-				if *t == 0 {
-					addRequiredError()
-				}
-			case *[]int:
-				if len(*t) == 0 {
-					addRequiredError()
-				}
-			case *bool:
-				if !*t == false {
-					addRequiredError()
-				}
-			case *[]bool:
-				if len(*t) == 0 {
-					addRequiredError()
-				}
-			case *string:
-				if *t == "" {
-					addRequiredError()
-				}
-			case *[]string:
-				if len(*t) == 0 {
-					addRequiredError()
-				}
-			case *time.Time:
-				if t.IsZero() {
-					addRequiredError()
-				}
-			case *[]time.Time:
-				if len(*t) == 0 {
-					addRequiredError()
-				}
-			}
-		}
-	}
-
 	if validator, ok := userStruct.(Validator); ok {
 		errs = validator.Validate(req, errs)
 	}
@@ -234,13 +127,16 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 	for fieldPointer, fieldNameOrSpec := range fm {
 
-		fieldName, _, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
+		fieldName, fieldHasSpec, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
 		_, isFile := fieldPointer.(**multipart.FileHeader)
 		_, isFileSlice := fieldPointer.(*[]**multipart.FileHeader)
 		strs := formData[fieldName]
 
 		if !isFile && !isFileSlice {
 			if len(strs) == 0 {
+				if fieldHasSpec && fieldSpec.Required {
+					errs.Add([]string{fieldName}, RequiredError, "Required")
+				}
 				continue
 			}
 			if binder, ok := fieldPointer.(Binder); ok {

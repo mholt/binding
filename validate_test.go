@@ -1,8 +1,8 @@
 package binding
 
 import (
-	"testing"
 	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 func TestValidate(t *testing.T) {
@@ -10,18 +10,6 @@ func TestValidate(t *testing.T) {
 	Convey("Given a struct populated properly and as expected", t, func() {
 
 		Convey("No errors should be produced", nil)
-
-	})
-
-	Convey("Given a populated struct missing one required field", t, func() {
-
-		Convey("A Required error should be produced", nil)
-
-	})
-
-	Convey("Given a populated struct missing multiple required fields", t, func() {
-
-		Convey("As many Required errors should be produced", nil)
 
 	})
 
