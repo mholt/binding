@@ -4,9 +4,7 @@
 package binding
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -90,21 +88,19 @@ func MultipartForm(req *http.Request, userStruct FieldMapper) Errors {
 func Json(req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
-	if req.Body != nil {
-		defer req.Body.Close()
-		err := json.NewDecoder(req.Body).Decode(userStruct)
-		if err != nil && err != io.EOF {
-			errs.Add([]string{}, DeserializationError, err.Error())
-			return errs
-		}
-	} else {
+	if req.Body == nil {
 		errs.Add([]string{}, DeserializationError, "Empty request body")
 		return errs
 	}
 
-	errs = append(errs, Validate(req, userStruct)...)
+	defer req.Body.Close()
+	formData, parseErr := FlatDecode(req.Body)
+	if parseErr != nil {
+		errs.Add([]string{}, DeserializationError, parseErr.Error())
+		return errs
+	}
 
-	return errs
+	return bindForm(req, userStruct, formData, nil, errs)
 }
 
 // Validate ensures that all conditions have been met on every field in the
