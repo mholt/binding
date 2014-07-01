@@ -695,8 +695,8 @@ type (
 	// coming from the request. Implement this interface so the type can be
 	// populated from form data in HTTP requests.
 	Binder interface {
-		// Bind populates the type with its name as the first string and
-		// data in []string, which comes from the HTTP request.
+		// Bind populates the type with data in []string which comes from the
+		// HTTP request. The first argument is the field name.
 		Bind(string, []string, Errors) Errors
 	}
 
