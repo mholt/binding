@@ -19,8 +19,8 @@ import (
 // Does neither use "json" struct tags nor applies reflection on JSON values.
 //
 // Unlike with "form-urlencoded" data, where keys can be repeated,
-// only one value for a key can exist. Therefore, although it could be a
-// JSON-encoded list, only the first string contains anything.
+// only one key:value mapping can exist.
+// Therefore only the first string contains anything.
 func FlatDecode(r io.Reader) (map[string][]string, error) {
 	// converts the return type of flatDecode
 	p, err := flatDecode(json.NewDecoder(r))
@@ -31,15 +31,18 @@ func FlatDecode(r io.Reader) (map[string][]string, error) {
 	return retval, err
 }
 
-// Unmarshals JSON-encoded data and stores the result in
-// map[string]interface{}.
+// Unmarshals JSON-encoded data.
 //
-// Explores nested JSON objects and "flattens" them. Let 'r' be a JSON name
-// containing a JSON object 'so' and 'sk' a JSON name in 'so', then a
-// "r.sk" ← so[sk] results.
+// Explores nested JSON objects and "flattens" them:
+//
+//   json := "{\"L1-A\": {\"L2\": \"V2\"}, \"L1-B\": \"V1-B\"}"
+//   p, _ := binding.FlatDecode(bytes.NewBufferString(json))
+//   // equals:
+//   p["L1-A.L2"] = V2
+//   p["L1-B"]    = V1-B
 //
 // JSON values are not unmarshaled with the exception of nested JSON objects
-// and opportunistic un-quoting because binding.bindForm is responsible for
+// and opportunistic un-quoting. binding.bindForm is responsible for
 // (reflection-less) processing of the values.
 func flatDecode(dec *json.Decoder) (map[string]json.RawMessage, error) {
 	// Our struct is their 'object', a key is called "name" in JSON.
@@ -62,7 +65,7 @@ func flatDecode(dec *json.Decoder) (map[string]json.RawMessage, error) {
 		case '"':
 			// Please note: e.g. "a"" results in 'invalid character' error.
 			// Unquoting can fail even for valid JSON data. Such a value
-			// is expected to not pass validation stage.
+			// is expected to not pass a later validation stage.
 			if u, ok := unquoteBytes(flatObject[name]); ok {
 				flatObject[name] = u
 			}
