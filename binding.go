@@ -4,9 +4,7 @@
 package binding
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -90,21 +88,19 @@ func MultipartForm(req *http.Request, userStruct FieldMapper) Errors {
 func Json(req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
-	if req.Body != nil {
-		defer req.Body.Close()
-		err := json.NewDecoder(req.Body).Decode(userStruct)
-		if err != nil && err != io.EOF {
-			errs.Add([]string{}, DeserializationError, err.Error())
-			return errs
-		}
-	} else {
+	if req.Body == nil {
 		errs.Add([]string{}, DeserializationError, "Empty request body")
 		return errs
 	}
 
-	errs = append(errs, Validate(req, userStruct)...)
+	defer req.Body.Close()
+	formData, parseErr := FlatDecode(req.Body)
+	if parseErr != nil {
+		errs.Add([]string{}, DeserializationError, parseErr.Error())
+		return errs
+	}
 
-	return errs
+	return bindForm(req, userStruct, formData, nil, errs)
 }
 
 // Validate ensures that all conditions have been met on every field in the
@@ -140,7 +136,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 				continue
 			}
 			if binder, ok := fieldPointer.(Binder); ok {
-				errs = binder.Bind(strs, errs)
+				errs = binder.Bind(fieldName, strs, errs)
 				continue
 			}
 		}
@@ -152,7 +148,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 		}
 
 		if fieldSpec.Binder != nil {
-			errs = fieldSpec.Binder(strs, errs)
+			errs = fieldSpec.Binder(fieldName, strs, errs)
 			continue
 		}
 
@@ -328,16 +324,16 @@ type (
 		// to the field type; in other words, this field is populated
 		// by executing this function. Useful when the custom type doesn't
 		// implement the Binder interface.
-		Binder func([]string, Errors) Errors
+		Binder func(string, []string, Errors) Errors
 	}
 
 	// Binder is an interface which can deserialize itself from a slice of string
 	// coming from the request. Implement this interface so the type can be
 	// populated from form data in HTTP requests.
 	Binder interface {
-		// Bind populates the type with data in []string, which comes from the
-		// HTTP request.
-		Bind([]string, Errors) Errors
+		// Bind populates the type with data in []string which comes from the
+		// HTTP request. The first argument is the field name.
+		Bind(string, []string, Errors) Errors
 	}
 
 	// Validator can be implemented by your type to handle some

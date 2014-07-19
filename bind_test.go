@@ -49,13 +49,13 @@ func TestBind(t *testing.T) {
 
 		})
 
-		Convey("Missing one required field", t, func() {
+		Convey("Missing one required field", func() {
 
 			Convey("A Required error should be produced", nil)
 
 		})
 
-		Convey("Missing multiple required fields", t, func() {
+		Convey("Missing multiple required fields", func() {
 
 			Convey("As many Required errors should be produced", nil)
 
