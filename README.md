@@ -136,7 +136,7 @@ If you can't add a method to the type, you can still specify a `Binder` func in 
 ```go
 func (t *MyType) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
-		"number": binding.Field{
+		&t.Id: binding.Field{
 			Binder: func(fieldName string, formVals []string, errs binding.Errors) binding.Errors {
 				val, err := strconv.Atoi(formVals[0])
 				if err != nil {
