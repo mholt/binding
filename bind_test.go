@@ -3,10 +3,37 @@ package binding
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+type Model struct {
+	Foo   string     `json:"foo"`
+	Bar   *string    `json:"bar"`
+	Baz   []int      `json:"baz"`
+	Child ChildModel `json:"child"`
+}
+
+func (m *Model) FieldMap() FieldMap {
+	return FieldMap{
+		&m.Foo: Field{
+			Form:     "foo",
+			Required: true,
+		},
+		&m.Bar: Field{
+			Form:     "bar",
+			Required: true,
+		},
+		&m.Baz:   "baz",
+		&m.Child: "child",
+	}
+}
+
+type ChildModel struct {
+	Wibble string `json:"wibble"`
+}
 
 func TestBind(t *testing.T) {
 	Convey("A request", t, func() {
@@ -40,9 +67,28 @@ func TestBind(t *testing.T) {
 		})
 
 		Convey("With a json Content-Type", func() {
+			NewJsonRequest := func(data string) (*http.Request, error) {
+				req, err := http.NewRequest("POST", "http://www.example.com", strings.NewReader(data))
+				if err != nil {
+					return nil, err
+				}
+				req.Header.Add("Content-type", "application/json; charset=utf-8")
+				return req, nil
+			}
 
-			Convey("Should invoke the Json deserializer", nil)
-
+			Convey("Should invoke Json deserializer", func() {
+				req, err := NewJsonRequest(`{ "foo": "foo-value", "child": { "wibble": "wobble" }, "baz": [1,2,3]}`)
+				So(err, ShouldBeNil)
+				model := new(Model)
+				invoked := false
+				Json = func(req *http.Request, v FieldMapper) Errors {
+					invoked = true
+					return DefaultJsonBinder(req, v)
+				}
+				Bind(req, model)
+				So(invoked, ShouldBeTrue)
+				Json = DefaultJsonBinder
+			})
 		})
 
 		Convey("With an unsupported Content-Type", func() {
