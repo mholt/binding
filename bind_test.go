@@ -2,11 +2,11 @@ package binding
 
 import (
 	"testing"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestBind(t *testing.T) {
-
 	Convey("A request", t, func() {
 
 		Convey("Without a Content-Type", func() {

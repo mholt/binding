@@ -125,43 +125,110 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 		addRequiredError := func() {
 			errs.Add([]string{fieldName}, RequiredError, "Required")
 		}
-
 		if fieldSpec.Required {
 			switch t := fieldPointer.(type) {
 			case *uint8:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **uint8:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]uint8:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *uint16:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **uint16:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]uint16:
+				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *uint32:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **uint32:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]uint32:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *uint64:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **uint64:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]uint64:
+				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *int8:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **int8:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]int8:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *int16:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **int16:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]int16:
+				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *int32:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **int32:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]int32:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *int64:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **int64:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]int64:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *float32:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **float32:
+				if *t == nil {
 					addRequiredError()
 				}
 			case *[]float32:
@@ -172,12 +239,20 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **float64:
+				if *t == nil {
+					addRequiredError()
+				}
 			case *[]float64:
 				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *uint:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **uint:
+				if *t == nil {
 					addRequiredError()
 				}
 			case *[]uint:
@@ -188,12 +263,20 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **int:
+				if *t == nil {
+					addRequiredError()
+				}
 			case *[]int:
 				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *bool:
-				if !*t == false {
+				if *t == false {
+					addRequiredError()
+				}
+			case **bool:
+				if *t == nil {
 					addRequiredError()
 				}
 			case *[]bool:
@@ -204,12 +287,20 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 				if *t == "" {
 					addRequiredError()
 				}
+			case **string:
+				if *t == nil {
+					addRequiredError()
+				}
 			case *[]string:
 				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *time.Time:
 				if t.IsZero() {
+					addRequiredError()
+				}
+			case **time.Time:
+				if *t == nil {
 					addRequiredError()
 				}
 			case *[]time.Time:
