@@ -193,7 +193,7 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 					addRequiredError()
 				}
 			case *bool:
-				if !*t == false {
+				if *t == false {
 					addRequiredError()
 				}
 			case *[]bool:
