@@ -240,7 +240,7 @@ func NewCompleteModel() AllTypes {
 	model.String = "I'm a little teapot"
 	model.PointerToString = &model.String
 	model.StringSlice = []string{model.String}
-	model.Time = time.Now()
+	model.Time, _ = time.Parse(TimeFormat, time.Now().Format(TimeFormat))
 	model.PointerToTime = &model.Time
 	model.TimeSlice = []time.Time{model.Time}
 
