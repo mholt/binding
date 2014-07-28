@@ -356,34 +356,82 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			val, err := strconv.ParseUint(strs[0], 10, 8)
 			errorHandler(err)
 			*t = uint8(val)
+		case *[]uint8:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 8)
+				errorHandler(err)
+				*t = append(*t, uint8(val))
+			}
 		case *uint16:
 			val, err := strconv.ParseUint(strs[0], 10, 16)
 			errorHandler(err)
 			*t = uint16(val)
+		case *[]uint16:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 16)
+				errorHandler(err)
+				*t = append(*t, uint16(val))
+			}
 		case *uint32:
 			val, err := strconv.ParseUint(strs[0], 10, 32)
 			errorHandler(err)
 			*t = uint32(val)
+		case *[]uint32:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 32)
+				errorHandler(err)
+				*t = append(*t, uint32(val))
+			}
 		case *uint64:
 			val, err := strconv.ParseUint(strs[0], 10, 64)
 			errorHandler(err)
 			*t = val
+		case *[]uint64:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 64)
+				errorHandler(err)
+				*t = append(*t, uint64(val))
+			}
 		case *int8:
 			val, err := strconv.ParseInt(strs[0], 10, 8)
 			errorHandler(err)
 			*t = int8(val)
+		case *[]int8:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 8)
+				errorHandler(err)
+				*t = append(*t, int8(val))
+			}
 		case *int16:
 			val, err := strconv.ParseInt(strs[0], 10, 16)
 			errorHandler(err)
 			*t = int16(val)
+		case *[]int16:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 16)
+				errorHandler(err)
+				*t = append(*t, int16(val))
+			}
 		case *int32:
 			val, err := strconv.ParseInt(strs[0], 10, 32)
 			errorHandler(err)
 			*t = int32(val)
+		case *[]int32:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 32)
+				errorHandler(err)
+				*t = append(*t, int32(val))
+			}
 		case *int64:
 			val, err := strconv.ParseInt(strs[0], 10, 64)
 			errorHandler(err)
 			*t = val
+		case *[]int64:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 64)
+				errorHandler(err)
+				*t = append(*t, int64(val))
+			}
 		case *float32:
 			val, err := strconv.ParseFloat(strs[0], 32)
 			errorHandler(err)
