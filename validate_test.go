@@ -192,7 +192,7 @@ func (at *AllTypes) FormValues() map[string][]string {
 		addField(&at.StringSlice, v)
 	}
 	addField(&at.Time, at.Time.Format(TimeFormat))
-	addField(&at.PointerToTime, *at.PointerToTime)
+	addField(&at.PointerToTime, (*at.PointerToTime).Format(TimeFormat))
 	for _, v := range at.TimeSlice {
 		addField(&at.TimeSlice, v.Format(TimeFormat))
 	}
