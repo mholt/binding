@@ -1,7 +1,9 @@
 package binding
 
 import (
+	"bytes"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -80,9 +82,32 @@ func TestBind(t *testing.T) {
 		})
 
 		Convey("With a multipart/form-data Content-Type", func() {
+			body := new(bytes.Buffer)
+			w := multipart.NewWriter(body)
+			_ = w.WriteField("foo", "foo-value")
+			_ = w.WriteField("child.wibble", "wobble")
+			_ = w.WriteField("baz", "1")
+			_ = w.WriteField("baz", "2")
+			_ = w.WriteField("baz", "3")
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
 
-			Convey("Should invoke the MultipartForm deserializer", nil)
+			req, err := http.NewRequest("POST", "http://www.example.com", body)
+			So(err, ShouldBeNil)
+			req.Header.Add("Content-Type", "multipart/form-data")
 
+			Convey("Should invoke the MultipartForm deserializer", func() {
+				model := new(Model)
+				invoked := false
+				multipartFormBinder = func(req *http.Request, v FieldMapper) Errors {
+					invoked = true
+					return defaultMultipartFormBinder(req, v)
+				}
+				Bind(req, model)
+				So(invoked, ShouldBeTrue)
+				multipartFormBinder = defaultMultipartFormBinder
+			})
 		})
 
 		Convey("With a json Content-Type", func() {
