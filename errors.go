@@ -64,7 +64,7 @@ func (e *Errors) Has(class string) bool {
 // Handle writes the errors to response in JSON form if any errors
 // are contained, and it will return true. Otherwise, nothing happens
 // and false is returned.
-func (e *Errors) Handle(response http.ResponseWriter) bool {
+func (e Errors) Handle(response http.ResponseWriter) bool {
 	if e.Len() > 0 {
 		response.Header().Set("Content-Type", jsonContentType)
 		if e.Has(DeserializationError) {
