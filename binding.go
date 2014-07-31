@@ -125,43 +125,110 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 		addRequiredError := func() {
 			errs.Add([]string{fieldName}, RequiredError, "Required")
 		}
-
 		if fieldSpec.Required {
 			switch t := fieldPointer.(type) {
 			case *uint8:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **uint8:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]uint8:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *uint16:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **uint16:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]uint16:
+				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *uint32:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **uint32:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]uint32:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *uint64:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **uint64:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]uint64:
+				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *int8:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **int8:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]int8:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *int16:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **int16:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]int16:
+				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *int32:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **int32:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]int32:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *int64:
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **int64:
+				if *t == nil {
+					addRequiredError()
+				}
+			case *[]int64:
+				if len(*t) == 0 {
+					addRequiredError()
+				}
 			case *float32:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **float32:
+				if *t == nil {
 					addRequiredError()
 				}
 			case *[]float32:
@@ -172,12 +239,20 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **float64:
+				if *t == nil {
+					addRequiredError()
+				}
 			case *[]float64:
 				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *uint:
 				if *t == 0 {
+					addRequiredError()
+				}
+			case **uint:
+				if *t == nil {
 					addRequiredError()
 				}
 			case *[]uint:
@@ -188,12 +263,20 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 				if *t == 0 {
 					addRequiredError()
 				}
+			case **int:
+				if *t == nil {
+					addRequiredError()
+				}
 			case *[]int:
 				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *bool:
-				if !*t == false {
+				if *t == false {
+					addRequiredError()
+				}
+			case **bool:
+				if *t == nil {
 					addRequiredError()
 				}
 			case *[]bool:
@@ -204,12 +287,20 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 				if *t == "" {
 					addRequiredError()
 				}
+			case **string:
+				if *t == nil {
+					addRequiredError()
+				}
 			case *[]string:
 				if len(*t) == 0 {
 					addRequiredError()
 				}
 			case *time.Time:
 				if t.IsZero() {
+					addRequiredError()
+				}
+			case **time.Time:
+				if *t == nil {
 					addRequiredError()
 				}
 			case *[]time.Time:
@@ -265,38 +356,158 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			val, err := strconv.ParseUint(strs[0], 10, 8)
 			errorHandler(err)
 			*t = uint8(val)
+		case **uint8:
+			parsed, err := strconv.ParseUint(strs[0], 10, 8)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := uint8(parsed)
+			*t = &val
+		case *[]uint8:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 8)
+				errorHandler(err)
+				*t = append(*t, uint8(val))
+			}
 		case *uint16:
 			val, err := strconv.ParseUint(strs[0], 10, 16)
 			errorHandler(err)
 			*t = uint16(val)
+		case **uint16:
+			parsed, err := strconv.ParseUint(strs[0], 10, 16)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := uint16(parsed)
+			*t = &val
+		case *[]uint16:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 16)
+				errorHandler(err)
+				*t = append(*t, uint16(val))
+			}
 		case *uint32:
 			val, err := strconv.ParseUint(strs[0], 10, 32)
 			errorHandler(err)
 			*t = uint32(val)
+		case **uint32:
+			parsed, err := strconv.ParseUint(strs[0], 10, 32)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := uint32(parsed)
+			*t = &val
+		case *[]uint32:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 32)
+				errorHandler(err)
+				*t = append(*t, uint32(val))
+			}
 		case *uint64:
 			val, err := strconv.ParseUint(strs[0], 10, 64)
 			errorHandler(err)
 			*t = val
+		case **uint64:
+			parsed, err := strconv.ParseUint(strs[0], 10, 64)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := uint64(parsed)
+			*t = &val
+		case *[]uint64:
+			for _, str := range strs {
+				val, err := strconv.ParseUint(str, 10, 64)
+				errorHandler(err)
+				*t = append(*t, uint64(val))
+			}
 		case *int8:
 			val, err := strconv.ParseInt(strs[0], 10, 8)
 			errorHandler(err)
 			*t = int8(val)
+		case **int8:
+			parsed, err := strconv.ParseInt(strs[0], 10, 8)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := int8(parsed)
+			*t = &val
+		case *[]int8:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 8)
+				errorHandler(err)
+				*t = append(*t, int8(val))
+			}
 		case *int16:
 			val, err := strconv.ParseInt(strs[0], 10, 16)
 			errorHandler(err)
 			*t = int16(val)
+		case **int16:
+			parsed, err := strconv.ParseInt(strs[0], 10, 16)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := int16(parsed)
+			*t = &val
+		case *[]int16:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 16)
+				errorHandler(err)
+				*t = append(*t, int16(val))
+			}
 		case *int32:
 			val, err := strconv.ParseInt(strs[0], 10, 32)
 			errorHandler(err)
 			*t = int32(val)
+		case **int32:
+			parsed, err := strconv.ParseInt(strs[0], 10, 32)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := int32(parsed)
+			*t = &val
+		case *[]int32:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 32)
+				errorHandler(err)
+				*t = append(*t, int32(val))
+			}
 		case *int64:
 			val, err := strconv.ParseInt(strs[0], 10, 64)
 			errorHandler(err)
 			*t = val
+		case **int64:
+			parsed, err := strconv.ParseInt(strs[0], 10, 64)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := int64(parsed)
+			*t = &val
+		case *[]int64:
+			for _, str := range strs {
+				val, err := strconv.ParseInt(str, 10, 64)
+				errorHandler(err)
+				*t = append(*t, int64(val))
+			}
 		case *float32:
 			val, err := strconv.ParseFloat(strs[0], 32)
 			errorHandler(err)
 			*t = float32(val)
+		case **float32:
+			parsed, err := strconv.ParseFloat(strs[0], 32)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := float32(parsed)
+			*t = &val
 		case *[]float32:
 			for _, str := range strs {
 				val, err := strconv.ParseFloat(str, 32)
@@ -307,6 +518,14 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			val, err := strconv.ParseFloat(strs[0], 64)
 			errorHandler(err)
 			*t = val
+		case **float64:
+			parsed, err := strconv.ParseFloat(strs[0], 64)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := float64(parsed)
+			*t = &val
 		case *[]float64:
 			for _, str := range strs {
 				val, err := strconv.ParseFloat(str, 64)
@@ -317,6 +536,14 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			val, err := strconv.ParseUint(strs[0], 10, 0)
 			errorHandler(err)
 			*t = uint(val)
+		case **uint:
+			parsed, err := strconv.ParseUint(strs[0], 10, 0)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := uint(parsed)
+			*t = &val
 		case *[]uint:
 			for _, str := range strs {
 				val, err := strconv.ParseUint(str, 10, 0)
@@ -327,6 +554,14 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			val, err := strconv.ParseInt(strs[0], 10, 0)
 			errorHandler(err)
 			*t = int(val)
+		case **int:
+			parsed, err := strconv.ParseInt(strs[0], 10, 0)
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			val := int(parsed)
+			*t = &val
 		case *[]int:
 			for _, str := range strs {
 				val, err := strconv.ParseInt(str, 10, 0)
@@ -337,6 +572,13 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			val, err := strconv.ParseBool(strs[0])
 			errorHandler(err)
 			*t = val
+		case **bool:
+			val, err := strconv.ParseBool(strs[0])
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			*t = &val
 		case *[]bool:
 			for _, str := range strs {
 				val, err := strconv.ParseBool(str)
@@ -345,6 +587,9 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			}
 		case *string:
 			*t = strs[0]
+		case **string:
+			s := strs[0]
+			*t = &s
 		case *[]string:
 			*t = strs
 		case *time.Time:
@@ -355,6 +600,17 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			val, err := time.Parse(timeFormat, strs[0])
 			errorHandler(err)
 			*t = val
+		case **time.Time:
+			timeFormat := TimeFormat
+			if fieldSpec.TimeFormat != "" {
+				timeFormat = fieldSpec.TimeFormat
+			}
+			val, err := time.Parse(timeFormat, strs[0])
+			if err != nil {
+				errorHandler(err)
+				continue
+			}
+			*t = &val
 		case *[]time.Time:
 			timeFormat := TimeFormat
 			if fieldSpec.TimeFormat != "" {
