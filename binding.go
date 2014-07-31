@@ -16,7 +16,7 @@ import (
 
 type RequestBinder func(req *http.Request, userStruct FieldMapper) Errors
 
-var Json RequestBinder = DefaultJsonBinder
+var Json RequestBinder = defaultJsonBinder
 
 // Bind takes data out of the request and deserializes into a struct according
 // to the Content-Type of the request. If no Content-Type is specified, there
@@ -91,7 +91,7 @@ func MultipartForm(req *http.Request, userStruct FieldMapper) Errors {
 // Json deserializes a JSON request body into a struct you specify
 // using the standard encoding/json package (which uses reflection).
 // This function invokes data validation after deserialization.
-func DefaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
+func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
 	if req.Body != nil {

@@ -83,11 +83,11 @@ func TestBind(t *testing.T) {
 				invoked := false
 				Json = func(req *http.Request, v FieldMapper) Errors {
 					invoked = true
-					return DefaultJsonBinder(req, v)
+					return defaultJsonBinder(req, v)
 				}
 				Bind(req, model)
 				So(invoked, ShouldBeTrue)
-				Json = DefaultJsonBinder
+				Json = defaultJsonBinder
 			})
 		})
 
