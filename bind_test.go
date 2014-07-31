@@ -3,6 +3,7 @@ package binding
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -55,9 +56,27 @@ func TestBind(t *testing.T) {
 		})
 
 		Convey("With a form-urlencoded Content-Type", func() {
+			data := url.Values{}
+			data.Add("foo", "foo-value")
+			data.Add("child.wibble", "wobble")
+			data.Add("baz", "1")
+			data.Add("baz", "2")
+			data.Add("baz", "3")
+			req, err := http.NewRequest("POST", "http://www.example.com", strings.NewReader(data.Encode()))
+			So(err, ShouldBeNil)
+			req.Header.Add("Content-type", "application/x-www-form-urlencoded")
 
-			Convey("Should invoke the Form deserializer", nil)
-
+			Convey("Should invoke the Form deserializer", func() {
+				model := new(Model)
+				invoked := false
+				formBinder = func(req *http.Request, v FieldMapper) Errors {
+					invoked = true
+					return defaultFormBinder(req, v)
+				}
+				Bind(req, model)
+				So(invoked, ShouldBeTrue)
+				formBinder = defaultFormBinder
+			})
 		})
 
 		Convey("With a multipart/form-data Content-Type", func() {
@@ -67,18 +86,12 @@ func TestBind(t *testing.T) {
 		})
 
 		Convey("With a json Content-Type", func() {
-			NewJsonRequest := func(data string) (*http.Request, error) {
-				req, err := http.NewRequest("POST", "http://www.example.com", strings.NewReader(data))
-				if err != nil {
-					return nil, err
-				}
-				req.Header.Add("Content-type", "application/json; charset=utf-8")
-				return req, nil
-			}
+			data := `{ "foo": "foo-value", "child": { "wibble": "wobble" }, "baz": [1,2,3]}`
+			req, err := http.NewRequest("POST", "http://www.example.com", strings.NewReader(data))
+			So(err, ShouldBeNil)
+			req.Header.Add("Content-type", "application/json; charset=utf-8")
 
 			Convey("Should invoke Json deserializer", func() {
-				req, err := NewJsonRequest(`{ "foo": "foo-value", "child": { "wibble": "wobble" }, "baz": [1,2,3]}`)
-				So(err, ShouldBeNil)
 				model := new(Model)
 				invoked := false
 				jsonBinder = func(req *http.Request, v FieldMapper) Errors {
