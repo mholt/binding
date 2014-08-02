@@ -10,9 +10,13 @@ import (
 
 type (
 	// Errors may be generated during deserialization, binding,
-	// or validation.
+	// or validation. It implements the built-in error interface.
 	Errors []Error
 
+	// Error is a powerful implementation of the built-in error
+	// interface that allows for error classification, custom error
+	// messages associated with specific fields, or with no
+	// associations at all.
 	Error struct {
 		// An error supports zero or more field names, because an
 		// error can morph three ways: (1) it can indicate something
@@ -65,6 +69,7 @@ func (e *Errors) Has(class string) bool {
 // Handle writes the errors to response in JSON form if any errors
 // are contained, and it will return true. Otherwise, nothing happens
 // and false is returned.
+// (The value receiver is due to issue 8: https://github.com/mholt/binding/issues/8)
 func (e Errors) Handle(response http.ResponseWriter) bool {
 	if e.Len() > 0 {
 		response.Header().Set("Content-Type", jsonContentType)
@@ -82,7 +87,7 @@ func (e Errors) Handle(response http.ResponseWriter) bool {
 	return false
 }
 
-// Error returns concatiated error messages
+// Error returns a concatenation of all its error messages.
 func (e Errors) Error() string {
 	messages := []string{}
 	for _, err := range e {
