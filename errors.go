@@ -3,6 +3,7 @@ package binding
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 // This file shamelessly adapted from martini-contrib/binding
@@ -79,6 +80,15 @@ func (e Errors) Handle(response http.ResponseWriter) bool {
 		return true
 	}
 	return false
+}
+
+// Error returns concatiated error messages
+func (e Errors) Error() string {
+	messages := []string{}
+	for _, err := range e {
+		messages = append(messages, err.Error())
+	}
+	return strings.Join(messages, ", ")
 }
 
 // Fields returns the list of field names this error is
