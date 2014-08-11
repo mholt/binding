@@ -1,12 +1,42 @@
 package binding
 
 import (
+	"bytes"
 	"fmt"
+	"mime/multipart"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+type Model struct {
+	Foo   string     `json:"foo"`
+	Bar   *string    `json:"bar"`
+	Baz   []int      `json:"baz"`
+	Child ChildModel `json:"child"`
+}
+
+func (m *Model) FieldMap() FieldMap {
+	return FieldMap{
+		&m.Foo: Field{
+			Form:     "foo",
+			Required: true,
+		},
+		&m.Bar: Field{
+			Form:     "bar",
+			Required: true,
+		},
+		&m.Baz:   "baz",
+		&m.Child: "child",
+	}
+}
+
+type ChildModel struct {
+	Wibble string `json:"wibble"`
+}
 
 func TestBind(t *testing.T) {
 	Convey("A request", t, func() {
@@ -28,21 +58,75 @@ func TestBind(t *testing.T) {
 		})
 
 		Convey("With a form-urlencoded Content-Type", func() {
+			data := url.Values{}
+			data.Add("foo", "foo-value")
+			data.Add("child.wibble", "wobble")
+			data.Add("baz", "1")
+			data.Add("baz", "2")
+			data.Add("baz", "3")
+			req, err := http.NewRequest("POST", "http://www.example.com", strings.NewReader(data.Encode()))
+			So(err, ShouldBeNil)
+			req.Header.Add("Content-type", "application/x-www-form-urlencoded")
 
-			Convey("Should invoke the Form deserializer", nil)
-
+			Convey("Should invoke the Form deserializer", func() {
+				model := new(Model)
+				invoked := false
+				formBinder = func(req *http.Request, v FieldMapper) Errors {
+					invoked = true
+					return defaultFormBinder(req, v)
+				}
+				Bind(req, model)
+				So(invoked, ShouldBeTrue)
+				formBinder = defaultFormBinder
+			})
 		})
 
 		Convey("With a multipart/form-data Content-Type", func() {
+			body := new(bytes.Buffer)
+			w := multipart.NewWriter(body)
+			_ = w.WriteField("foo", "foo-value")
+			_ = w.WriteField("child.wibble", "wobble")
+			_ = w.WriteField("baz", "1")
+			_ = w.WriteField("baz", "2")
+			_ = w.WriteField("baz", "3")
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
 
-			Convey("Should invoke the MultipartForm deserializer", nil)
+			req, err := http.NewRequest("POST", "http://www.example.com", body)
+			So(err, ShouldBeNil)
+			req.Header.Add("Content-Type", "multipart/form-data")
 
+			Convey("Should invoke the MultipartForm deserializer", func() {
+				model := new(Model)
+				invoked := false
+				multipartFormBinder = func(req *http.Request, v FieldMapper) Errors {
+					invoked = true
+					return defaultMultipartFormBinder(req, v)
+				}
+				Bind(req, model)
+				So(invoked, ShouldBeTrue)
+				multipartFormBinder = defaultMultipartFormBinder
+			})
 		})
 
 		Convey("With a json Content-Type", func() {
+			data := `{ "foo": "foo-value", "child": { "wibble": "wobble" }, "baz": [1,2,3]}`
+			req, err := http.NewRequest("POST", "http://www.example.com", strings.NewReader(data))
+			So(err, ShouldBeNil)
+			req.Header.Add("Content-type", "application/json; charset=utf-8")
 
-			Convey("Should invoke the Json deserializer", nil)
-
+			Convey("Should invoke Json deserializer", func() {
+				model := new(Model)
+				invoked := false
+				jsonBinder = func(req *http.Request, v FieldMapper) Errors {
+					invoked = true
+					return defaultJsonBinder(req, v)
+				}
+				Bind(req, model)
+				So(invoked, ShouldBeTrue)
+				jsonBinder = defaultJsonBinder
+			})
 		})
 
 		Convey("With an unsupported Content-Type", func() {
