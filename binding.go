@@ -134,7 +134,7 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 func Validate(req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
-	fm := userStruct.FieldMap()
+	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
 		fieldName, fieldHasSpec, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
@@ -342,7 +342,7 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]string,
 	formFile map[string][]*multipart.FileHeader, errs Errors) Errors {
 
-	fm := userStruct.FieldMap()
+	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
 
@@ -680,9 +680,9 @@ func fieldNameAndSpec(fieldNameOrSpec interface{}) (string, bool, Field) {
 type (
 	// Only types that are FieldMappers can have request data deserialized into them.
 	FieldMapper interface {
-		// FieldMap returns a map that keys field names from the request
-		// to pointers into which the values will be deserialized.
-		FieldMap() FieldMap
+		// FieldMap returns a map of pointers into which the values will
+		// be deserialized to field names from the request's form body.
+		FieldMap(*http.Request) FieldMap
 	}
 
 	// FieldMap is a map of pointers to struct fields -> field names from the request.
