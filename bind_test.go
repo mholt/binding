@@ -2,7 +2,6 @@ package binding
 
 import (
 	"bytes"
-	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -149,7 +148,7 @@ func TestBindForm(t *testing.T) {
 				req, err := http.NewRequest("POST", "http://www.example.com", nil)
 				So(err, ShouldBeNil)
 				var errs Errors
-				errs = bindForm(req, &actual, formData, nil, errs)
+				errs = bindForm(req, &actual, formData, nil)
 				Convey("Then all of the struct's fields should be populated", func() {
 					Convey("Then the Uint8 field should have the expected value", func() {
 						So(actual.Uint8, ShouldEqual, expected.Uint8)
@@ -337,7 +336,7 @@ func TestBindForm(t *testing.T) {
 					So(errs.Len(), ShouldEqual, 0)
 					if errs.Len() > 0 {
 						for _, e := range errs {
-							Println(fmt.Sprintf("%v. %s", e.FieldNames, e.Message))
+							t.Logf("%v. %s", e.Field(), e.Error())
 						}
 					}
 				})

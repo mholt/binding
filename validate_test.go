@@ -17,7 +17,7 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			model := NewCompleteModel()
-			errs := Validate(req, &model)
+			errs := validate(req, &model)
 
 			expectedErrs := make(map[string]bool)
 			for _, v := range model.FieldMap() {
@@ -30,10 +30,8 @@ func TestValidate(t *testing.T) {
 			}
 
 			for _, bindErr := range errs {
-				for _, name := range bindErr.FieldNames {
-					if bindErr.Classification == RequiredError {
-						expectedErrs[name] = true
-					}
+				if bindErr.Kind() == RequiredError {
+					expectedErrs[bindErr.Field()] = true
 				}
 			}
 
@@ -63,7 +61,7 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			model := new(AllTypes)
-			errs := Validate(req, model)
+			errs := validate(req, model)
 
 			expectedErrs := make(map[string]bool)
 			for _, v := range model.FieldMap() {
@@ -76,10 +74,8 @@ func TestValidate(t *testing.T) {
 			}
 
 			for _, bindErr := range errs {
-				for _, name := range bindErr.FieldNames {
-					if bindErr.Classification == RequiredError {
-						expectedErrs[name] = true
-					}
+				if bindErr.Kind() == RequiredError {
+					expectedErrs[bindErr.Field()] = true
 				}
 			}
 

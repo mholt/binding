@@ -19,7 +19,7 @@ type requestBinder func(req *http.Request, userStruct FieldMapper) Errors
 // Bind takes data out of the request and deserializes into a struct according
 // to the Content-Type of the request. If no Content-Type is specified, there
 // better be data in the query string, otherwise an error will be produced.
-func Bind(req *http.Request, userStruct FieldMapper) Errors {
+func Bind(req *http.Request, userStruct FieldMapper) error {
 	var errs Errors
 
 	contentType := req.Header.Get("Content-Type")
@@ -40,20 +40,27 @@ func Bind(req *http.Request, userStruct FieldMapper) Errors {
 		if len(req.URL.Query()) > 0 {
 			return Form(req, userStruct)
 		} else {
-			errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
-			errs = append(errs, Validate(req, userStruct)...)
+			errs.Add("", ContentTypeError, "Empty Content-Type")
+			errs = append(errs, validate(req, userStruct)...)
 		}
 	} else {
-		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
+		errs.Add("", ContentTypeError, "Unsupported Content-Type")
 	}
 
-	return errs
+	if len(errs) > 0 {
+		return &errs
+	}
+	return nil
 }
 
 // Form deserializes form data out of the request into a struct you provide.
 // This function invokes data validation after deserialization.
-func Form(req *http.Request, userStruct FieldMapper) Errors {
-	return formBinder(req, userStruct)
+func Form(req *http.Request, userStruct FieldMapper) error {
+	err := formBinder(req, userStruct)
+	if len(err) > 0 {
+		return err
+	}
+	return nil
 }
 
 var formBinder requestBinder = defaultFormBinder
@@ -63,18 +70,23 @@ func defaultFormBinder(req *http.Request, userStruct FieldMapper) Errors {
 
 	parseErr := req.ParseForm()
 	if parseErr != nil {
-		errs.Add([]string{}, DeserializationError, parseErr.Error())
+		errs.Add("", DeserializationError, parseErr.Error())
 		return errs
 	}
 
-	return bindForm(req, userStruct, req.Form, nil, errs)
+	return bindForm(req, userStruct, req.Form, nil)
 }
 
 // MultipartForm reads a multipart form request and deserializes its data and
 // files into a struct you provide. Files should be deserialized into
 // *multipart.FileHeader fields.
-func MultipartForm(req *http.Request, userStruct FieldMapper) Errors {
-	return multipartFormBinder(req, userStruct)
+func MultipartForm(req *http.Request, userStruct FieldMapper) error {
+	err := multipartFormBinder(req, userStruct)
+	if len(err) > 0 {
+		return err
+	}
+
+	return nil
 }
 
 var multipartFormBinder requestBinder = defaultMultipartFormBinder
@@ -84,26 +96,31 @@ func defaultMultipartFormBinder(req *http.Request, userStruct FieldMapper) Error
 
 	multipartReader, err := req.MultipartReader()
 	if err != nil {
-		errs.Add([]string{}, DeserializationError, err.Error())
+		errs.Add("", DeserializationError, err.Error())
 		return errs
 	}
 
 	form, parseErr := multipartReader.ReadForm(MaxMemory)
 	if parseErr != nil {
-		errs.Add([]string{}, DeserializationError, parseErr.Error())
+		errs.Add("", DeserializationError, parseErr.Error())
 		return errs
 	}
 
 	req.MultipartForm = form
 
-	return bindForm(req, userStruct, req.MultipartForm.Value, req.MultipartForm.File, errs)
+	return bindForm(req, userStruct, req.MultipartForm.Value, req.MultipartForm.File)
 }
 
 // Json deserializes a JSON request body into a struct you specify
 // using the standard encoding/json package (which uses reflection).
 // This function invokes data validation after deserialization.
-func Json(req *http.Request, userStruct FieldMapper) Errors {
-	return jsonBinder(req, userStruct)
+func Json(req *http.Request, userStruct FieldMapper) error {
+	err := jsonBinder(req, userStruct)
+	if len(err) > 0 {
+		return err
+	}
+
+	return nil
 }
 
 var jsonBinder requestBinder = defaultJsonBinder
@@ -115,23 +132,35 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 		defer req.Body.Close()
 		err := json.NewDecoder(req.Body).Decode(userStruct)
 		if err != nil && err != io.EOF {
-			errs.Add([]string{}, DeserializationError, err.Error())
+			errs.Add("", DeserializationError, err.Error())
 			return errs
 		}
 	} else {
-		errs.Add([]string{}, DeserializationError, "Empty request body")
+		errs.Add("", DeserializationError, "Empty request body")
 		return errs
 	}
 
-	errs = append(errs, Validate(req, userStruct)...)
+	errs = append(errs, validate(req, userStruct)...)
+	if len(errs) > 0 {
+		return errs
+	}
 
-	return errs
+	return nil
 }
 
 // Validate ensures that all conditions have been met on every field in the
 // populated struct. Validation should occur after the request has been
 // deserialized into the struct.
-func Validate(req *http.Request, userStruct FieldMapper) Errors {
+func Validate(req *http.Request, userStruct FieldMapper) error {
+	err := validate(req, userStruct)
+	if len(err) > 0 {
+		return err
+	}
+
+	return nil
+}
+
+func validate(req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
 	fm := userStruct.FieldMap()
@@ -144,7 +173,7 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 		}
 
 		addRequiredError := func() {
-			errs.Add([]string{fieldName}, RequiredError, "Required")
+			errs.Add(fieldName, RequiredError, "Required")
 		}
 		if fieldSpec.Required {
 			switch t := fieldPointer.(type) {
@@ -333,14 +362,30 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 	}
 
 	if validator, ok := userStruct.(Validator); ok {
-		errs = validator.Validate(req, errs)
+		err := validator.Validate(req)
+		if err != nil {
+			switch e := err.(type) {
+			case FieldError:
+				errs = append(errs, e)
+			case Errors:
+				errs = append(errs, e...)
+			default:
+				errs.Add("", "", e.Error())
+			}
+		}
 	}
 
-	return errs
+	if len(errs) > 0 {
+		return errs
+	}
+
+	return nil
 }
 
 func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]string,
-	formFile map[string][]*multipart.FileHeader, errs Errors) Errors {
+	formFile map[string][]*multipart.FileHeader) Errors {
+
+	var errs Errors
 
 	fm := userStruct.FieldMap()
 
@@ -356,19 +401,40 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 				continue
 			}
 			if binder, ok := fieldPointer.(Binder); ok {
-				errs = binder.Bind(fieldName, strs, errs)
+				err := binder.Bind(fieldName, strs)
+				if err != nil {
+					switch e := err.(type) {
+					case FieldError:
+						errs = append(errs, e)
+					case Errors:
+						errs = append(errs, e...)
+					default:
+						errs.Add(fieldName, "", e.Error())
+					}
+				}
 				continue
 			}
 		}
 
 		errorHandler := func(err error) {
 			if err != nil {
-				errs.Add([]string{fieldName}, TypeError, err.Error())
+				errs.Add(fieldName, TypeError, err.Error())
 			}
 		}
 
 		if fieldSpec.Binder != nil {
-			errs = fieldSpec.Binder(fieldName, strs, errs)
+			err := fieldSpec.Binder(fieldName, strs)
+			if err != nil {
+				switch e := err.(type) {
+				case FieldError:
+					errs = append(errs, e)
+				case Errors:
+					errs = append(errs, e...)
+				default:
+					errs.Add(fieldName, "", e.Error())
+				}
+			}
+
 			continue
 		}
 
@@ -658,9 +724,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 	}
 
-	errs = append(errs, Validate(req, userStruct)...)
-
-	return errs
+	return append(errs, validate(req, userStruct)...)
 }
 
 func fieldNameAndSpec(fieldNameOrSpec interface{}) (string, bool, Field) {
@@ -709,7 +773,7 @@ type (
 		// to the field type; in other words, this field is populated
 		// by executing this function. Useful when the custom type doesn't
 		// implement the Binder interface.
-		Binder func(string, []string, Errors) Errors
+		Binder func(string, []string) error
 	}
 
 	// Binder is an interface which can deserialize itself from a slice of string
@@ -718,7 +782,7 @@ type (
 	Binder interface {
 		// Bind populates the type with data in []string which comes from the
 		// HTTP request. The first argument is the field name.
-		Bind(string, []string, Errors) Errors
+		Bind(string, []string) error
 	}
 
 	// Validator can be implemented by your type to handle some
@@ -731,7 +795,7 @@ type (
 		// in your application. For example, you might verify that a credit
 		// card number matches a valid pattern, but you probably wouldn't
 		// perform an actual credit card authorization here.
-		Validate(*http.Request, Errors) Errors
+		Validate(*http.Request) error
 	}
 )
 
