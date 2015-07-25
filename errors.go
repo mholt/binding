@@ -13,16 +13,13 @@ type (
 	// or validation. It implements the built-in error interface.
 	Errors []FieldError
 
-	// Error is a powerful implementation of the built-in error
-	// interface that allows for error classification, custom error
-	// messages associated with specific fields, or with no
-	// associations at all.
-	fieldError struct {
-		// An error supports a field names because an
-		// error can morph two ways: (1) it can indicate something
-		// wrong with the request as a whole, or (2) it can point to a
-		// specific problem with a particular input field.
-		fieldName string `json:"fieldNames,omitempty"`
+	fieldsError struct {
+		// A fieldError supports zero or more field names, because an
+		// error can morph three ways: (1) it can indicate something
+		// wrong with the request as a whole, (2) it can point to a
+		// specific problem with a particular input field, or (3) it
+		// can span multiple related input fields.
+		fieldNames []string `json:"fieldNames,omitempty"`
 
 		// The classification is like an error code, convenient to
 		// use when processing or categorizing an error programmatically.
@@ -37,18 +34,22 @@ type (
 		message string `json:"message,omitempty"`
 	}
 
+	// FieldError is a powerful implementation of the built-in error
+	// interface that allows for error classification, custom error
+	// messages associated with specific fields, or with no
+	// associations at all.
 	FieldError interface {
 		error
-		Field() string
+		Fields() []string
 		Kind() string
 	}
 )
 
 // Add adds an fieldError associated with the field indicated
 // by fieldName, with the given classification and message.
-func (e *Errors) Add(fieldName string, classification, message string) {
-	*e = append(*e, fieldError{
-		fieldName:      fieldName,
+func (e *Errors) Add(fieldNames []string, classification, message string) {
+	*e = append(*e, fieldsError{
+		fieldNames:     fieldNames,
 		classification: classification,
 		message:        message,
 	})
@@ -103,17 +104,17 @@ func (e Errors) Error() string {
 
 // Fields returns the list of field names this error is
 // associated with.
-func (e fieldError) Field() string {
-	return e.fieldName
+func (e fieldsError) Fields() []string {
+	return e.fieldNames[:]
 }
 
 // Kind returns this error's classification.
-func (e fieldError) Kind() string {
+func (e fieldsError) Kind() string {
 	return e.classification
 }
 
 // Error returns this error's message.
-func (e fieldError) Error() string {
+func (e fieldsError) Error() string {
 	return e.message
 }
 

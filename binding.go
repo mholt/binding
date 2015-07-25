@@ -40,11 +40,11 @@ func Bind(req *http.Request, userStruct FieldMapper) error {
 		if len(req.URL.Query()) > 0 {
 			return Form(req, userStruct)
 		} else {
-			errs.Add("", ContentTypeError, "Empty Content-Type")
+			errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
 			errs = append(errs, validate(req, userStruct)...)
 		}
 	} else {
-		errs.Add("", ContentTypeError, "Unsupported Content-Type")
+		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
 	}
 
 	if len(errs) > 0 {
@@ -70,7 +70,7 @@ func defaultFormBinder(req *http.Request, userStruct FieldMapper) Errors {
 
 	parseErr := req.ParseForm()
 	if parseErr != nil {
-		errs.Add("", DeserializationError, parseErr.Error())
+		errs.Add([]string{}, DeserializationError, parseErr.Error())
 		return errs
 	}
 
@@ -96,13 +96,13 @@ func defaultMultipartFormBinder(req *http.Request, userStruct FieldMapper) Error
 
 	multipartReader, err := req.MultipartReader()
 	if err != nil {
-		errs.Add("", DeserializationError, err.Error())
+		errs.Add([]string{}, DeserializationError, err.Error())
 		return errs
 	}
 
 	form, parseErr := multipartReader.ReadForm(MaxMemory)
 	if parseErr != nil {
-		errs.Add("", DeserializationError, parseErr.Error())
+		errs.Add([]string{}, DeserializationError, parseErr.Error())
 		return errs
 	}
 
@@ -132,11 +132,11 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 		defer req.Body.Close()
 		err := json.NewDecoder(req.Body).Decode(userStruct)
 		if err != nil && err != io.EOF {
-			errs.Add("", DeserializationError, err.Error())
+			errs.Add([]string{}, DeserializationError, err.Error())
 			return errs
 		}
 	} else {
-		errs.Add("", DeserializationError, "Empty request body")
+		errs.Add([]string{}, DeserializationError, "Empty request body")
 		return errs
 	}
 
@@ -173,7 +173,7 @@ func validate(req *http.Request, userStruct FieldMapper) Errors {
 		}
 
 		addRequiredError := func() {
-			errs.Add(fieldName, RequiredError, "Required")
+			errs.Add([]string{fieldName}, RequiredError, "Required")
 		}
 		if fieldSpec.Required {
 			switch t := fieldPointer.(type) {
@@ -370,7 +370,7 @@ func validate(req *http.Request, userStruct FieldMapper) Errors {
 			case Errors:
 				errs = append(errs, e...)
 			default:
-				errs.Add("", "", e.Error())
+				errs.Add([]string{}, "", e.Error())
 			}
 		}
 	}
@@ -409,7 +409,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 					case Errors:
 						errs = append(errs, e...)
 					default:
-						errs.Add(fieldName, "", e.Error())
+						errs.Add([]string{fieldName}, "", e.Error())
 					}
 				}
 				continue
@@ -418,7 +418,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 		errorHandler := func(err error) {
 			if err != nil {
-				errs.Add(fieldName, TypeError, err.Error())
+				errs.Add([]string{fieldName}, TypeError, err.Error())
 			}
 		}
 
@@ -431,7 +431,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 				case Errors:
 					errs = append(errs, e...)
 				default:
-					errs.Add(fieldName, "", e.Error())
+					errs.Add([]string{fieldName}, "", e.Error())
 				}
 			}
 
