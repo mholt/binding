@@ -11,7 +11,17 @@ import (
 type (
 	// Errors may be generated during deserialization, binding,
 	// or validation. It implements the built-in error interface.
-	Errors []FieldError
+	Errors []Error
+
+	// FieldError is a powerful implementation of the built-in error
+	// interface that allows for error classification, custom error
+	// messages associated with specific fields, or with no
+	// associations at all.
+	Error interface {
+		error
+		Fields() []string
+		Kind() string
+	}
 
 	fieldsError struct {
 		// A fieldError supports zero or more field names, because an
@@ -32,16 +42,6 @@ type (
 		// an error in the 41st object. The message should help the
 		// end user find and fix the error with their request.
 		message string `json:"message,omitempty"`
-	}
-
-	// FieldError is a powerful implementation of the built-in error
-	// interface that allows for error classification, custom error
-	// messages associated with specific fields, or with no
-	// associations at all.
-	FieldError interface {
-		error
-		Fields() []string
-		Kind() string
 	}
 )
 

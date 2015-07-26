@@ -365,7 +365,7 @@ func validate(req *http.Request, userStruct FieldMapper) Errors {
 		err := validator.Validate(req)
 		if err != nil {
 			switch e := err.(type) {
-			case FieldError:
+			case Error:
 				errs = append(errs, e)
 			case Errors:
 				errs = append(errs, e...)
@@ -404,7 +404,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 				err := binder.Bind(fieldName, strs)
 				if err != nil {
 					switch e := err.(type) {
-					case FieldError:
+					case Error:
 						errs = append(errs, e)
 					case Errors:
 						errs = append(errs, e...)
@@ -426,7 +426,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			err := fieldSpec.Binder(fieldName, strs)
 			if err != nil {
 				switch e := err.(type) {
-				case FieldError:
+				case Error:
 					errs = append(errs, e)
 				case Errors:
 					errs = append(errs, e...)
