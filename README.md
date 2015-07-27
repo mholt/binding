@@ -66,9 +66,8 @@ func (cf *ContactForm) FieldMap() binding.FieldMap {
 // Now your handlers can stay clean and simple
 func handler(resp http.ResponseWriter, req *http.Request) {
 	contactForm := new(ContactForm)
-	if errs := binding.Bind(req, contactForm); err != nil {
-		e := errs.(binding.Errors)
-		e.Handle(resp)
+	if errs := binding.Bind(req, contactForm); errs != nil {
+		http.Error(resp, errs.Error(), http.StatusBadRequest)
 		return
 	}
 	fmt.Fprintf(resp, "From:    %d\n", contactForm.User.ID)
@@ -113,8 +112,7 @@ func (f *MultipartForm) FieldMap() binding.FieldMap {
 func handler(resp http.ResponseWriter, req *http.Request) {
 	multipartForm := new(MultipartForm)
 	if errs := binding.Bind(req, multipartForm); errs != nil {
-		e := errs.(binding.Errors)
-		e.Handle(resp)
+		http.Error(resp, errs.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -173,24 +171,6 @@ func (cf ContactForm) Validate(req *http.Request) error {
 	return nil
 }
 ```
-
-
-
-Error Handling
----------------
-
-`binding.Bind()` and each deserializer returns errors. You don't have to use them, but the `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
-
-```go
-if errs := binding.Bind(req, contactForm); errs != nil {
-	e := errs.(binding.Errors)
-	if e.Handle(resp) {
-		return
-	}
-}
-```
-
-As you can see, if `.Handle(resp)` wrote errors to the response, your handler may gracefully exit.
 
 
 

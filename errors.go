@@ -1,10 +1,6 @@
 package binding
 
-import (
-	"encoding/json"
-	"net/http"
-	"strings"
-)
+import "strings"
 
 // This file shamelessly adapted from martini-contrib/binding
 
@@ -68,27 +64,6 @@ func (e *Errors) Has(class string) bool {
 		if err.Kind() == class {
 			return true
 		}
-	}
-	return false
-}
-
-// Handle writes the errors to response in JSON form if any errors
-// are contained, and it will return true. Otherwise, nothing happens
-// and false is returned.
-// (The value receiver is due to issue 8: https://github.com/mholt/binding/issues/8)
-func (e *Errors) Handle(response http.ResponseWriter) bool {
-	if e.Len() > 0 {
-		response.Header().Set("Content-Type", jsonContentType)
-		if e.Has(DeserializationError) {
-			response.WriteHeader(http.StatusBadRequest)
-		} else if e.Has(ContentTypeError) {
-			response.WriteHeader(http.StatusUnsupportedMediaType)
-		} else {
-			response.WriteHeader(StatusUnprocessableEntity)
-		}
-		errOutput, _ := json.Marshal(e)
-		response.Write(errOutput)
-		return true
 	}
 	return false
 }
