@@ -31,7 +31,9 @@ func TestValidate(t *testing.T) {
 
 			for _, bindErr := range errs {
 				if bindErr.Kind() == RequiredError {
-					expectedErrs[bindErr.Field()] = true
+					for _, name := range bindErr.Fields() {
+						expectedErrs[name] = true
+					}
 				}
 			}
 
@@ -75,7 +77,9 @@ func TestValidate(t *testing.T) {
 
 			for _, bindErr := range errs {
 				if bindErr.Kind() == RequiredError {
-					expectedErrs[bindErr.Field()] = true
+					for _, name := range bindErr.Fields() {
+						expectedErrs[name] = true
+					}
 				}
 			}
 

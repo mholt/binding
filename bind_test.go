@@ -336,7 +336,7 @@ func TestBindForm(t *testing.T) {
 					So(errs.Len(), ShouldEqual, 0)
 					if errs.Len() > 0 {
 						for _, e := range errs {
-							t.Logf("%v. %s", e.Field(), e.Error())
+							t.Logf("%v. %s", e.Fields(), e.Error())
 						}
 					}
 				})
