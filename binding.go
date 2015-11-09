@@ -144,7 +144,12 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 		}
 
 		addRequiredError := func() {
-			errs.Add([]string{fieldName}, RequiredError, "Required")
+			errorMsg := "Required"
+			if len(fieldSpec.ErrorMessage) > 0 {
+				errorMsg = fieldSpec.ErrorMessage
+			}
+
+			errs.Add([]string{fieldName}, RequiredError, errorMsg)
 		}
 		if fieldSpec.Required {
 			switch t := fieldPointer.(type) {
@@ -710,6 +715,9 @@ type (
 		// by executing this function. Useful when the custom type doesn't
 		// implement the Binder interface.
 		Binder func(string, []string, Errors) Errors
+
+		//A custom error message
+		ErrorMessage string
 	}
 
 	// Binder is an interface which can deserialize itself from a slice of string
