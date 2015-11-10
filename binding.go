@@ -144,7 +144,7 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 		}
 
 		addRequiredError := func() {
-			errorMsg := "Please enter a value for " + fieldName
+			errorMsg := "Required"
 			if len(fieldSpec.ErrorMessage) > 0 {
 				errorMsg = fieldSpec.ErrorMessage
 			}
