@@ -17,7 +17,8 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			model := NewCompleteModel()
-			errs := Validate(req, &model)
+			var errs Errors
+			errs = Validate(errs, req, &model)
 
 			expectedErrs := make(map[string]bool)
 			for _, v := range model.FieldMap(nil) {
@@ -63,7 +64,8 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			model := new(AllTypes)
-			errs := Validate(req, model)
+			var errs Errors
+			errs = Validate(errs, req, model)
 
 			expectedErrs := make(map[string]bool)
 			for _, v := range model.FieldMap(nil) {
