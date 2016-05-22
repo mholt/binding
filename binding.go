@@ -70,6 +70,8 @@ func defaultFormBinder(req *http.Request, userStruct FieldMapper) Errors {
 	return bindForm(req, userStruct, req.Form, nil, errs)
 }
 
+// URL reads data out of the query string into a struct you provide.
+// This function invokes data validation after deserialization.
 func URL(req *http.Request, userStruct FieldMapper) Errors {
 	return urlBinder(req, userStruct)
 }
