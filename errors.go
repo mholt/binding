@@ -85,6 +85,14 @@ func (e Errors) Handle(response http.ResponseWriter) bool {
 	return false
 }
 
+// ErrorsHandleFunc Errors custom handler
+type ErrorsHandleFunc func(e Errors, response http.ResponseWriter) bool
+
+// CustomHandle Custom handle Errors
+func (e Errors) CustomHandle(handler ErrorsHandleFunc, response http.ResponseWriter) bool {
+	return handler(e, response)
+}
+
 // Error returns a concatenation of all its error messages.
 func (e Errors) Error() string {
 	messages := []string{}
