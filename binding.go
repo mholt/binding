@@ -39,9 +39,6 @@ func Bind(req *http.Request, userStruct FieldMapper) Errors {
 	if contentType == "" {
 		if len(req.URL.Query()) > 0 {
 			return Form(req, userStruct)
-		} else {
-			errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
-			errs = append(errs, Validate(req, userStruct)...)
 		}
 	} else {
 		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
