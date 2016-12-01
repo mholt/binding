@@ -96,7 +96,7 @@ func (e Errors) CustomHandle(handler ErrorsHandleFunc, response http.ResponseWri
 
 // Error returns a concatenation of all its error messages.
 func (e Errors) Error() string {
-	messages := []string{}
+	messages := make([]string, 0, e.Len())
 	for _, err := range e {
 		messages = append(messages, err.Error())
 	}
