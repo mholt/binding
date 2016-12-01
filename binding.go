@@ -12,33 +12,35 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
-type requestBinder func(req *http.Request, userStruct FieldMapper) Errors
+type requestBinder func(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors
 
 // Bind takes data out of the request and deserializes into a struct according
 // to the Content-Type of the request. If no Content-Type is specified, there
 // better be data in the query string, otherwise an error will be produced.
-func Bind(req *http.Request, userStruct FieldMapper) Errors {
+func Bind(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
 	contentType := req.Header.Get("Content-Type")
 
 	if strings.Contains(contentType, "form-urlencoded") {
-		return Form(req, userStruct)
+		return Form(ctx, req, userStruct)
 	}
 
 	if strings.Contains(contentType, "multipart/form-data") {
-		return MultipartForm(req, userStruct)
+		return MultipartForm(ctx, req, userStruct)
 	}
 
 	if strings.Contains(contentType, "json") {
-		return Json(req, userStruct)
+		return Json(ctx, req, userStruct)
 	}
 
 	if contentType == "" {
 		if len(req.URL.Query()) > 0 {
-			return Form(req, userStruct)
+			return Form(ctx, req, userStruct)
 		}
 	} else {
 		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
@@ -49,13 +51,13 @@ func Bind(req *http.Request, userStruct FieldMapper) Errors {
 
 // Form deserializes form data out of the request into a struct you provide.
 // This function invokes data validation after deserialization.
-func Form(req *http.Request, userStruct FieldMapper) Errors {
-	return formBinder(req, userStruct)
+func Form(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors {
+	return formBinder(ctx, req, userStruct)
 }
 
 var formBinder requestBinder = defaultFormBinder
 
-func defaultFormBinder(req *http.Request, userStruct FieldMapper) Errors {
+func defaultFormBinder(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
 	parseErr := req.ParseForm()
@@ -64,19 +66,19 @@ func defaultFormBinder(req *http.Request, userStruct FieldMapper) Errors {
 		return errs
 	}
 
-	return bindForm(req, userStruct, req.Form, nil, errs)
+	return bindForm(ctx, req, userStruct, req.Form, nil, errs)
 }
 
 // MultipartForm reads a multipart form request and deserializes its data and
 // files into a struct you provide. Files should be deserialized into
 // *multipart.FileHeader fields.
-func MultipartForm(req *http.Request, userStruct FieldMapper) Errors {
-	return multipartFormBinder(req, userStruct)
+func MultipartForm(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors {
+	return multipartFormBinder(ctx, req, userStruct)
 }
 
 var multipartFormBinder requestBinder = defaultMultipartFormBinder
 
-func defaultMultipartFormBinder(req *http.Request, userStruct FieldMapper) Errors {
+func defaultMultipartFormBinder(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
 	multipartReader, err := req.MultipartReader()
@@ -93,19 +95,19 @@ func defaultMultipartFormBinder(req *http.Request, userStruct FieldMapper) Error
 
 	req.MultipartForm = form
 
-	return bindForm(req, userStruct, req.MultipartForm.Value, req.MultipartForm.File, errs)
+	return bindForm(ctx, req, userStruct, req.MultipartForm.Value, req.MultipartForm.File, errs)
 }
 
 // Json deserializes a JSON request body into a struct you specify
 // using the standard encoding/json package (which uses reflection).
 // This function invokes data validation after deserialization.
-func Json(req *http.Request, userStruct FieldMapper) Errors {
-	return jsonBinder(req, userStruct)
+func Json(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors {
+	return jsonBinder(ctx, req, userStruct)
 }
 
 var jsonBinder requestBinder = defaultJsonBinder
 
-func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
+func defaultJsonBinder(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
 	if req.Body != nil {
@@ -120,7 +122,7 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 		return errs
 	}
 
-	errs = append(errs, Validate(req, userStruct)...)
+	errs = append(errs, Validate(ctx, req, userStruct)...)
 
 	return errs
 }
@@ -128,7 +130,7 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 // Validate ensures that all conditions have been met on every field in the
 // populated struct. Validation should occur after the request has been
 // deserialized into the struct.
-func Validate(req *http.Request, userStruct FieldMapper) Errors {
+func Validate(ctx context.Context, req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
 	fm := userStruct.FieldMap(req)
@@ -335,13 +337,13 @@ func Validate(req *http.Request, userStruct FieldMapper) Errors {
 	}
 
 	if validator, ok := userStruct.(Validator); ok {
-		errs = validator.Validate(req, errs)
+		errs = validator.Validate(ctx, req, errs)
 	}
 
 	return errs
 }
 
-func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]string,
+func bindForm(ctx context.Context, req *http.Request, userStruct FieldMapper, formData map[string][]string,
 	formFile map[string][]*multipart.FileHeader, errs Errors) Errors {
 
 	fm := userStruct.FieldMap(req)
@@ -660,7 +662,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 	}
 
-	errs = append(errs, Validate(req, userStruct)...)
+	errs = append(errs, Validate(ctx, req, userStruct)...)
 
 	return errs
 }
@@ -730,13 +732,12 @@ type (
 	// rudimentary request validation separately from your
 	// application logic.
 	Validator interface {
-		// Validate validates that the request is OK. It is recommended
-		// that validation be limited to checking values for syntax and
-		// semantics, enough to know that you can make sense of the request
-		// in your application. For example, you might verify that a credit
-		// card number matches a valid pattern, but you probably wouldn't
-		// perform an actual credit card authorization here.
-		Validate(*http.Request, Errors) Errors
+		// Validate validates that the request is OK.
+		// Not only checking values for syntax and semantics
+		// but also checking values for business.
+		// For example, you can fetch db connection from context
+		// and then do business checking.
+		Validate(context.Context, *http.Request, Errors) Errors
 	}
 )
 
