@@ -88,7 +88,8 @@ func (e Errors) Handle(response http.ResponseWriter) bool {
 // ErrorsHandleFunc Errors custom handler
 type ErrorsHandleFunc func(e Errors, response http.ResponseWriter) bool
 
-// CustomHandle Custom handle Errors
+// CustomHandle writes the errors to response by yourself if any errors are contained,
+// and it will return true. Otherwise, nothing happens and false is returned.
 func (e Errors) CustomHandle(handler ErrorsHandleFunc, response http.ResponseWriter) bool {
 	return handler(e, response)
 }
