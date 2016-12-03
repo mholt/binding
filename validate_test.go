@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"golang.org/x/net/context"
 )
 
 func TestValidate(t *testing.T) {
+	ctx := context.Background()
 	Convey("Given a struct populated properly and as expected", t, func() {
 
 		Convey("No errors should be produced", FailureContinues, func() {
@@ -17,7 +19,7 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			model := NewCompleteModel()
-			errs := Validate(req, &model)
+			errs := Validate(ctx, req, &model)
 
 			expectedErrs := make(map[string]bool)
 			for _, v := range model.FieldMap(nil) {
@@ -63,7 +65,7 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			model := new(AllTypes)
-			errs := Validate(req, model)
+			errs := Validate(ctx, req, model)
 
 			expectedErrs := make(map[string]bool)
 			for _, v := range model.FieldMap(nil) {

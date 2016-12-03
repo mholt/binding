@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"golang.org/x/net/context"
 )
 
 type Model struct {
@@ -39,6 +40,7 @@ type ChildModel struct {
 }
 
 func TestBind(t *testing.T) {
+	ctx := context.Background()
 	Convey("A request", t, func() {
 
 		Convey("Without a Content-Type", func() {
@@ -71,11 +73,11 @@ func TestBind(t *testing.T) {
 			Convey("Should invoke the Form deserializer", func() {
 				model := new(Model)
 				invoked := false
-				formBinder = func(req *http.Request, v FieldMapper) Errors {
+				formBinder = func(ctx context.Context, req *http.Request, v FieldMapper) Errors {
 					invoked = true
-					return defaultFormBinder(req, v)
+					return defaultFormBinder(ctx, req, v)
 				}
-				Bind(req, model)
+				Bind(ctx, req, model)
 				So(invoked, ShouldBeTrue)
 				formBinder = defaultFormBinder
 			})
@@ -100,11 +102,11 @@ func TestBind(t *testing.T) {
 			Convey("Should invoke the MultipartForm deserializer", func() {
 				model := new(Model)
 				invoked := false
-				multipartFormBinder = func(req *http.Request, v FieldMapper) Errors {
+				multipartFormBinder = func(ctx context.Context, req *http.Request, v FieldMapper) Errors {
 					invoked = true
-					return defaultMultipartFormBinder(req, v)
+					return defaultMultipartFormBinder(ctx, req, v)
 				}
-				Bind(req, model)
+				Bind(ctx, req, model)
 				So(invoked, ShouldBeTrue)
 				multipartFormBinder = defaultMultipartFormBinder
 			})
@@ -119,11 +121,11 @@ func TestBind(t *testing.T) {
 			Convey("Should invoke Json deserializer", func() {
 				model := new(Model)
 				invoked := false
-				jsonBinder = func(req *http.Request, v FieldMapper) Errors {
+				jsonBinder = func(ctx context.Context, req *http.Request, v FieldMapper) Errors {
 					invoked = true
-					return defaultJsonBinder(req, v)
+					return defaultJsonBinder(ctx, req, v)
 				}
-				Bind(req, model)
+				Bind(ctx, req, model)
 				So(invoked, ShouldBeTrue)
 				jsonBinder = defaultJsonBinder
 			})
@@ -139,6 +141,7 @@ func TestBind(t *testing.T) {
 }
 
 func TestBindForm(t *testing.T) {
+	ctx := context.Background()
 	Convey("Given a struct reference and complete form data", t, func() {
 		expected := NewCompleteModel()
 		formData := expected.FormValues()
@@ -149,7 +152,7 @@ func TestBindForm(t *testing.T) {
 				req, err := http.NewRequest("POST", "http://www.example.com", nil)
 				So(err, ShouldBeNil)
 				var errs Errors
-				errs = bindForm(req, &actual, formData, nil, errs)
+				errs = bindForm(ctx, req, &actual, formData, nil, errs)
 				Convey("Then all of the struct's fields should be populated", func() {
 					Convey("Then the Uint8 field should have the expected value", func() {
 						So(actual.Uint8, ShouldEqual, expected.Uint8)

@@ -85,9 +85,18 @@ func (e Errors) Handle(response http.ResponseWriter) bool {
 	return false
 }
 
+// ErrorsHandleFunc Errors custom handler
+type ErrorsHandleFunc func(e Errors, response http.ResponseWriter) bool
+
+// CustomHandle writes the errors to response by yourself if any errors are contained,
+// and it will return true. Otherwise, nothing happens and false is returned.
+func (e Errors) CustomHandle(handler ErrorsHandleFunc, response http.ResponseWriter) bool {
+	return handler(e, response)
+}
+
 // Error returns a concatenation of all its error messages.
 func (e Errors) Error() string {
-	messages := []string{}
+	messages := make([]string, 0, e.Len())
 	for _, err := range e {
 		messages = append(messages, err.Error())
 	}
