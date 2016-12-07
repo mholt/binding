@@ -651,8 +651,8 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			}
 		case *[]**multipart.FileHeader:
 			if files, ok := formFile[fieldName]; ok {
-				for _, file := range files {
-					*t = append(*t, &file)
+				for i, _ := range files {
+					*t = append(*t, &(files[i]))
 				}
 			}
 		default:
