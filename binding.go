@@ -351,7 +351,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 		fieldName, _, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
 		_, isFile := fieldPointer.(**multipart.FileHeader)
-		_, isFileSlice := fieldPointer.(*[]**multipart.FileHeader)
+		_, isFileSlice := fieldPointer.(*[]*multipart.FileHeader)
 		strs := formData[fieldName]
 
 		if fieldSpec.Binder != nil {
@@ -649,10 +649,11 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			if files, ok := formFile[fieldName]; ok {
 				*t = files[0]
 			}
-		case *[]**multipart.FileHeader:
+
+		case *[]*multipart.FileHeader:
 			if files, ok := formFile[fieldName]; ok {
 				for _, file := range files {
-					*t = append(*t, &file)
+					*t = append(*t, file)
 				}
 			}
 		default:
