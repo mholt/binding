@@ -48,7 +48,7 @@ func Bind(req *http.Request, userStruct FieldMapper) error {
 	}
 
 	if len(errs) > 0 {
-		return &errs
+		return errs
 	}
 	return nil
 }
