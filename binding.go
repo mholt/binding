@@ -41,7 +41,7 @@ func Bind(req *http.Request, userStruct FieldMapper) Errors {
 			return Form(req, userStruct)
 		} else {
 			errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
-			errs = append(errs, Validate(req, userStruct)...)
+			errs = Validate(errs, req, userStruct)
 		}
 	} else {
 		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
@@ -123,7 +123,7 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 		return errs
 	}
 
-	errs = append(errs, Validate(req, userStruct)...)
+	errs = Validate(errs, req, userStruct)
 
 	return errs
 }
@@ -131,9 +131,7 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 // Validate ensures that all conditions have been met on every field in the
 // populated struct. Validation should occur after the request has been
 // deserialized into the struct.
-func Validate(req *http.Request, userStruct FieldMapper) Errors {
-	var errs Errors
-
+func Validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
 	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
@@ -663,7 +661,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 	}
 
-	errs = append(errs, Validate(req, userStruct)...)
+	errs = Validate(errs, req, userStruct)
 
 	return errs
 }
