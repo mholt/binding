@@ -36,13 +36,13 @@ func Bind(req *http.Request, userStruct FieldMapper) error {
 		return Json(req, userStruct)
 	}
 
+	if req.Method == http.MethodGet || req.Method == http.MethodHead || (contentType == "" && len(req.URL.Query()) > 0) {
+		return URL(req, userStruct)
+	}
+
 	if contentType == "" {
-		if len(req.URL.Query()) > 0 {
-			return Form(req, userStruct)
-		} else {
-			errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
-			errs = append(errs, validate(req, userStruct)...)
-		}
+		errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
+		errs = validate(errs, req, userStruct)
 	} else {
 		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
 	}
@@ -75,6 +75,18 @@ func defaultFormBinder(req *http.Request, userStruct FieldMapper) Errors {
 	}
 
 	return bindForm(req, userStruct, req.Form, nil)
+}
+
+// URL reads data out of the query string into a struct you provide.
+// This function invokes data validation after deserialization.
+func URL(req *http.Request, userStruct FieldMapper) Errors {
+	return urlBinder(req, userStruct)
+}
+
+var urlBinder requestBinder = defaultURLBinder
+
+func defaultURLBinder(req *http.Request, userStruct FieldMapper) Errors {
+	return bindForm(req, userStruct, req.URL.Query(), nil)
 }
 
 // MultipartForm reads a multipart form request and deserializes its data and
@@ -140,7 +152,7 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 		return errs
 	}
 
-	errs = append(errs, validate(req, userStruct)...)
+	errs = validate(errs, req, userStruct)
 	if len(errs) > 0 {
 		return errs
 	}
@@ -152,7 +164,7 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 // populated struct. Validation should occur after the request has been
 // deserialized into the struct.
 func Validate(req *http.Request, userStruct FieldMapper) error {
-	err := validate(req, userStruct)
+	err := validate(Errors{}, req, userStruct)
 	if len(err) > 0 {
 		return err
 	}
@@ -160,10 +172,8 @@ func Validate(req *http.Request, userStruct FieldMapper) error {
 	return nil
 }
 
-func validate(req *http.Request, userStruct FieldMapper) Errors {
-	var errs Errors
-
-	fm := userStruct.FieldMap()
+func validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
+	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
 		fieldName, fieldHasSpec, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
@@ -173,7 +183,12 @@ func validate(req *http.Request, userStruct FieldMapper) Errors {
 		}
 
 		addRequiredError := func() {
-			errs.Add([]string{fieldName}, RequiredError, "Required")
+			errorMsg := "Required"
+			if len(fieldSpec.ErrorMessage) > 0 {
+				errorMsg = fieldSpec.ErrorMessage
+			}
+
+			errs.Add([]string{fieldName}, RequiredError, errorMsg)
 		}
 		if fieldSpec.Required {
 			switch t := fieldPointer.(type) {
@@ -387,14 +402,30 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 	var errs Errors
 
-	fm := userStruct.FieldMap()
+	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
 
 		fieldName, _, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
 		_, isFile := fieldPointer.(**multipart.FileHeader)
-		_, isFileSlice := fieldPointer.(*[]**multipart.FileHeader)
+		_, isFileSlice := fieldPointer.(*[]*multipart.FileHeader)
 		strs := formData[fieldName]
+
+		if fieldSpec.Binder != nil {
+			err := fieldSpec.Binder(fieldName, strs)
+			if err != nil {
+				switch e := err.(type) {
+				case Error:
+					errs = append(errs, e)
+				case Errors:
+					errs = append(errs, e...)
+				default:
+					errs.Add([]string{fieldName}, "", e.Error())
+				}
+			}
+
+			continue
+		}
 
 		if !isFile && !isFileSlice {
 			if len(strs) == 0 {
@@ -420,22 +451,6 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			if err != nil {
 				errs.Add([]string{fieldName}, TypeError, err.Error())
 			}
-		}
-
-		if fieldSpec.Binder != nil {
-			err := fieldSpec.Binder(fieldName, strs)
-			if err != nil {
-				switch e := err.(type) {
-				case Error:
-					errs = append(errs, e)
-				case Errors:
-					errs = append(errs, e...)
-				default:
-					errs.Add([]string{fieldName}, "", e.Error())
-				}
-			}
-
-			continue
 		}
 
 		switch t := fieldPointer.(type) {
@@ -712,10 +727,11 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 			if files, ok := formFile[fieldName]; ok {
 				*t = files[0]
 			}
-		case *[]**multipart.FileHeader:
+
+		case *[]*multipart.FileHeader:
 			if files, ok := formFile[fieldName]; ok {
 				for _, file := range files {
-					*t = append(*t, &file)
+					*t = append(*t, file)
 				}
 			}
 		default:
@@ -724,7 +740,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 	}
 
-	return append(errs, validate(req, userStruct)...)
+	return validate(errs, req, userStruct)
 }
 
 func fieldNameAndSpec(fieldNameOrSpec interface{}) (string, bool, Field) {
@@ -744,9 +760,9 @@ func fieldNameAndSpec(fieldNameOrSpec interface{}) (string, bool, Field) {
 type (
 	// Only types that are FieldMappers can have request data deserialized into them.
 	FieldMapper interface {
-		// FieldMap returns a map that keys field names from the request
-		// to pointers into which the values will be deserialized.
-		FieldMap() FieldMap
+		// FieldMap returns a map of pointers into which the values will
+		// be deserialized to field names from the request's form body.
+		FieldMap(*http.Request) FieldMap
 	}
 
 	// FieldMap is a map of pointers to struct fields -> field names from the request.
@@ -774,6 +790,9 @@ type (
 		// by executing this function. Useful when the custom type doesn't
 		// implement the Binder interface.
 		Binder func(string, []string) error
+
+		// ErrorMessage allows the error the to be customized.
+		ErrorMessage string
 	}
 
 	// Binder is an interface which can deserialize itself from a slice of string

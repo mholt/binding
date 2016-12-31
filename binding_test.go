@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -12,13 +13,15 @@ import (
 )
 
 type Model struct {
-	Foo   string     `json:"foo"`
-	Bar   *string    `json:"bar"`
-	Baz   []int      `json:"baz"`
-	Child ChildModel `json:"child"`
+	Foo   string                  `json:"foo"`
+	Bar   *string                 `json:"bar"`
+	Baz   []int                   `json:"baz"`
+	Child ChildModel              `json:"child"`
+	Quux  *multipart.FileHeader   `json:"quux"`
+	Corge []*multipart.FileHeader `json:"corge"`
 }
 
-func (m *Model) FieldMap() FieldMap {
+func (m *Model) FieldMap(req *http.Request) FieldMap {
 	return FieldMap{
 		&m.Foo: Field{
 			Form:     "foo",
@@ -30,6 +33,8 @@ func (m *Model) FieldMap() FieldMap {
 		},
 		&m.Baz:   "baz",
 		&m.Child: "child",
+		&m.Quux:  "quux",
+		&m.Corge: "corge",
 	}
 }
 
@@ -43,15 +48,25 @@ func TestBind(t *testing.T) {
 		Convey("Without a Content-Type", func() {
 
 			Convey("But with a query string", func() {
-
-				Convey("Should invoke the Form deserializer", nil)
-
+				Convey("With method GET", func() {
+					Convey("Should invoke the URL binder", func() {
+					})
+				})
+				Convey("With method HEAD", func() {
+					Convey("Should invoke the URL binder", func() {
+					})
+				})
+				Convey("With unsafe method", func() {
+					Convey("Should invoke the Form deserializer", nil)
+				})
 			})
 
-			Convey("And without a query string", func() {
+			Convey("With safe method", func() {
+				Convey("And without a query string", func() {
 
-				Convey("Should yield an error", nil)
+					Convey("Should yield an error", nil)
 
+				})
 			})
 
 		})
@@ -63,8 +78,7 @@ func TestBind(t *testing.T) {
 			data.Add("baz", "1")
 			data.Add("baz", "2")
 			data.Add("baz", "3")
-			req, err := http.NewRequest("POST", "http://www.example.com", strings.NewReader(data.Encode()))
-			So(err, ShouldBeNil)
+			req := httptest.NewRequest("POST", "http://www.example.com", strings.NewReader(data.Encode()))
 			req.Header.Add("Content-type", "application/x-www-form-urlencoded")
 
 			Convey("Should invoke the Form deserializer", func() {
@@ -88,13 +102,19 @@ func TestBind(t *testing.T) {
 			_ = w.WriteField("baz", "1")
 			_ = w.WriteField("baz", "2")
 			_ = w.WriteField("baz", "3")
+			file, _ := w.CreateFormFile("quux", "quux.txt")
+			_, _ = file.Write([]byte("quux contents"))
+			file, _ = w.CreateFormFile("corge", "corge1.txt")
+			_, _ = file.Write([]byte("corge1 contents"))
+			file, _ = w.CreateFormFile("corge", "corge2.txt")
+			_, _ = file.Write([]byte("corge2 contents"))
 			if err := w.Close(); err != nil {
 				t.Fatal(err)
 			}
 
 			req, err := http.NewRequest("POST", "http://www.example.com", body)
 			So(err, ShouldBeNil)
-			req.Header.Add("Content-Type", "multipart/form-data")
+			req.Header.Set("Content-Type", w.FormDataContentType())
 
 			Convey("Should invoke the MultipartForm deserializer", func() {
 				model := new(Model)
@@ -106,6 +126,14 @@ func TestBind(t *testing.T) {
 				Bind(req, model)
 				So(invoked, ShouldBeTrue)
 				multipartFormBinder = defaultMultipartFormBinder
+			})
+
+			Convey("With file data", func() {
+				model := new(Model)
+				Bind(req, model)
+				So(model.Quux.Filename, ShouldEqual, "quux.txt")
+				So(model.Corge[0].Filename, ShouldEqual, "corge1.txt")
+				So(model.Corge[1].Filename, ShouldEqual, "corge2.txt")
 			})
 		})
 

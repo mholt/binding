@@ -17,10 +17,11 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			model := NewCompleteModel()
-			errs := validate(req, &model)
+			var errs Errors
+			errs = validate(errs, req, &model)
 
 			expectedErrs := make(map[string]bool)
-			for _, v := range model.FieldMap() {
+			for _, v := range model.FieldMap(nil) {
 				f, ok := v.(Field)
 				if !ok {
 					t.Fatal("unexpected value in FieldMap")
@@ -63,10 +64,11 @@ func TestValidate(t *testing.T) {
 				t.Fatal(err)
 			}
 			model := new(AllTypes)
-			errs := validate(req, model)
+			var errs Errors
+			errs = validate(errs, req, model)
 
 			expectedErrs := make(map[string]bool)
-			for _, v := range model.FieldMap() {
+			for _, v := range model.FieldMap(nil) {
 				f, ok := v.(Field)
 				if !ok {
 					t.Fatal("unexpected value in FieldMap")
