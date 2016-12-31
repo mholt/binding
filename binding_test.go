@@ -49,15 +49,25 @@ func TestBind(t *testing.T) {
 		Convey("Without a Content-Type", func() {
 
 			Convey("But with a query string", func() {
-
-				Convey("Should invoke the Form deserializer", nil)
-
+				Convey("With method GET", func() {
+					Convey("Should invoke the URL binder", func() {
+					})
+				})
+				Convey("With method HEAD", func() {
+					Convey("Should invoke the URL binder", func() {
+					})
+				})
+				Convey("With unsafe method", func() {
+					Convey("Should invoke the Form deserializer", nil)
+				})
 			})
 
-			Convey("And without a query string", func() {
+			Convey("With safe method", func() {
+				Convey("And without a query string", func() {
 
-				Convey("Should yield an error", nil)
+					Convey("Should yield an error", nil)
 
+				})
 			})
 
 		})
