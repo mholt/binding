@@ -23,6 +23,9 @@ func Bind(req *http.Request, userStruct FieldMapper) Errors {
 	var errs Errors
 
 	contentType := req.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "form-urlencoded"
+	}
 
 	if strings.Contains(contentType, "form-urlencoded") {
 		return Form(req, userStruct)
@@ -36,16 +39,7 @@ func Bind(req *http.Request, userStruct FieldMapper) Errors {
 		return Json(req, userStruct)
 	}
 
-	if contentType == "" {
-		if len(req.URL.Query()) > 0 {
-			return Form(req, userStruct)
-		} else {
-			errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
-			errs = Validate(errs, req, userStruct)
-		}
-	} else {
-		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
-	}
+	errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
 
 	return errs
 }

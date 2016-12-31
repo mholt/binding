@@ -56,7 +56,7 @@ func TestBind(t *testing.T) {
 
 			Convey("And without a query string", func() {
 
-				Convey("Should yield an error", nil)
+				Convey("Should invoke the Form deserializer", nil)
 
 			})
 
