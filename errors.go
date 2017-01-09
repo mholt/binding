@@ -65,11 +65,7 @@ type (
 // in a JSON array might have an error in the 41st object. The message should
 // help the end user find and fix the error with their request.
 func (e *Errors) Add(fieldNames []string, kind, message string) {
-	*e = append(*e, fieldsError{
-		fieldNames:     fieldNames,
-		classification: kind,
-		message:        message,
-	})
+	*e = append(*e, NewError(fieldNames, kind, message))
 }
 
 // Len returns the number of errors.
@@ -95,6 +91,14 @@ func (e Errors) Error() string {
 		messages = append(messages, err.Message())
 	}
 	return strings.Join(messages, "\n")
+}
+
+func NewError(fieldNames []string, kind, message string) Error {
+	return fieldsError{
+		fieldNames:     fieldNames,
+		classification: kind,
+		message:        message,
+	}
 }
 
 // Fields returns the list of field names associated with e.
