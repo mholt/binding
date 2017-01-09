@@ -55,7 +55,7 @@ type (
 // the given kind and message.
 //
 // Use a fieldNames value of length 0 to indicate that the error is about the
-// request as a whole, and not necessary any of the fields.
+// request as a whole, and not necessarily any of the fields.
 //
 // kind should be a string that can be used like an error code to process or
 // categorize the error being added.

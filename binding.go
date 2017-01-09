@@ -742,7 +742,6 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 		default:
 			errorHandler(errors.New("Field type is unsupported by the application"))
 		}
-
 	}
 
 	return validate(errs, req, userStruct)
