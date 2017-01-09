@@ -161,11 +161,7 @@ You may optionally have your type implement the `binding.Validator` interface to
 func (cf ContactForm) Validate(req *http.Request) error {
 	if cf.Message == "Go needs generics" {
 		return binding.Errors{
-			binding.Error{
-				FieldNames:     []string{"message"},
-				Classification: "ComplaintError",
-				Message:        "Go has generics. They're called interfaces.",
-			},
+			binding.NewError([]string{"message"}, "ComplaintError", "Go has generics. They're called interfaces.")
 		}
 	}
 	return nil
@@ -196,15 +192,11 @@ func (t *MyType) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
 		"number": binding.Field{
 			Binder: func(fieldName string, formVals []string) error {
-				errs := binding.Errors{}
 				val, err := strconv.Atoi(formVals[0])
 				if err != nil {
-					errs.Add([]string{fieldName}, binding.DeserializationError, err.Error())
+					return binding.Errors{binding.NewError([]string{fieldName}, binding.DeserializationError, err.Error())}
 				}
 				t.SomeNumber = val
-				if errs.Len() > 0 {
-					return errs
-				}
 				return nil
 			},
 		},
