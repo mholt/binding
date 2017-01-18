@@ -35,19 +35,19 @@ type (
 		// 		* it can indicate something wrong with the request as a whole.
 		//		* it can point to a specific problem with a particular input field
 		//		* it can span multiple related input fields.
-		fieldNames []string `json:"fieldNames,omitempty"`
+		fields []string
 
 		// The classification is like an error code, convenient to
 		// use when processing or categorizing an error programmatically.
 		// It may also be called the "kind" of error.
-		classification string `json:"classification,omitempty"`
+		kind string
 
 		// Message should be human-readable and detailed enough to
 		// pinpoint and resolve the problem, but it should be brief. For
 		// example, a payload of 100 objects in a JSON array might have
 		// an error in the 41st object. The message should help the
 		// end user find and fix the error with their request.
-		message string `json:"message,omitempty"`
+		message string
 	}
 )
 
@@ -95,20 +95,20 @@ func (e Errors) Error() string {
 
 func NewError(fieldNames []string, kind, message string) Error {
 	return fieldsError{
-		fieldNames:     fieldNames,
-		classification: kind,
-		message:        message,
+		fields:  fieldNames,
+		kind:    kind,
+		message: message,
 	}
 }
 
-// Fields returns the list of field names associated with e.
+// Fields returns the names of the fields associated with e.
 func (e fieldsError) Fields() []string {
-	return e.fieldNames
+	return e.fields
 }
 
 // Kind returns a string that can be used to categorize e.
 func (e fieldsError) Kind() string {
-	return e.classification
+	return e.kind
 }
 
 // Message returns the message of e.
@@ -117,12 +117,12 @@ func (e fieldsError) Message() string {
 }
 
 func (e fieldsError) Error() string {
-	if len(e.fieldNames) == 0 {
+	if len(e.fields) == 0 {
 		return e.message
 	}
 
-	fields := make([]string, len(e.fieldNames))
-	for i, f := range e.fieldNames {
+	fields := make([]string, len(e.fields))
+	for i, f := range e.fields {
 		fields[i] = fmt.Sprintf("* %s", f)
 	}
 
