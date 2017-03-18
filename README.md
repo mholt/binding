@@ -183,7 +183,7 @@ For types you've defined, you can bind form data to it by implementing the `Bind
 ```go
 type MyType map[string]string
 
-func (t *MyType) Bind(fieldName string, strVals []string) error {
+func (t MyType) Bind(fieldName string, strVals []string) error {
 	t["formData"] = strVals[0]
 	return nil
 }
@@ -212,8 +212,7 @@ func (t *MyType) FieldMap() binding.FieldMap {
 }
 ```
 
-Notice that the `binding.Errors` type has a convenience method `.Add()` which you can use to append to the slice if you prefer.
-
+The `Errors` type has a convenience method, `Add`, which you can use to append to the slice if you prefer.
 
 Supported types (forms)
 ------------------------
