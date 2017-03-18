@@ -229,10 +229,10 @@ Supported types (forms)
 
 The following types are supported in form deserialization by default. (JSON requests are delegated to `encoding/json`.)
 
-- uint, *uint, []uint, uint8, *uint8, []uint8, uint16, *uint16, []uint16, uint32, *uint32, []uint32, uint64, *uint64, []uint64
-- int, *int, []int, int8, *int8, []int8, int16, *int16, []int16, int32, *int32, []int32, int64, *int64, []int64
-- float32, *float32, []float32, float64, *float64, []float64
-- bool, *bool, []bool
-- string, *string, []string
-- time.Time, *time.Time, []time.Time
-- *multipart.FileHeader, []*multipart.FileHeader
+- uint, \*uint, []uint, uint8, \*uint8, []uint8, uint16, \*uint16, []uint16, uint32, \*uint32, []uint32, uint64, \*uint64, []uint64
+- int, \*int, []int, int8, \*int8, []int8, int16, \*int16, []int16, int32, \*int32, []int32, int64, \*int64, []int64
+- float32, \*float32, []float32, float64, \*float64, []float64
+- bool, \*bool, []bool
+- string, \*string, []string
+- time.Time, \*time.Time, []time.Time
+- \*multipart.FileHeader, []\*multipart.FileHeader
