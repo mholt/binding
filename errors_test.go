@@ -6,6 +6,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+var _ error = &fieldsError{}
+var _ error = Errors{}
+var _ error = *new(Error)
+var _ Error = &fieldsError{}
+
 func TestErrorAdd(t *testing.T) {
 
 	Convey("When using Add to add an error to the slice", t, func() {
