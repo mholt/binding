@@ -149,9 +149,8 @@ func Validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
 	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
-		fieldName, fieldHasSpec, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
-
-		if !fieldHasSpec {
+		fieldSpec, err := fieldSpecification(fieldNameOrSpec)
+		if err != nil {
 			continue
 		}
 
@@ -161,7 +160,7 @@ func Validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
 				errorMsg = fieldSpec.ErrorMessage
 			}
 
-			errs.Add([]string{fieldName}, RequiredError, errorMsg)
+			errs.Add([]string{fieldSpec.Form}, RequiredError, errorMsg)
 		}
 		if fieldSpec.Required {
 			switch t := fieldPointer.(type) {
@@ -363,13 +362,17 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 	for fieldPointer, fieldNameOrSpec := range fm {
 
-		fieldName, _, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
+		fieldSpec, err := fieldSpecification(fieldNameOrSpec)
+		if err != nil {
+			continue
+		}
+
 		_, isFile := fieldPointer.(**multipart.FileHeader)
 		_, isFileSlice := fieldPointer.(*[]*multipart.FileHeader)
-		strs := formData[fieldName]
+		strs := formData[fieldSpec.Form]
 
 		if fieldSpec.Binder != nil {
-			errs = fieldSpec.Binder(fieldName, strs, errs)
+			errs = fieldSpec.Binder(fieldSpec.Form, strs, errs)
 			continue
 		}
 
@@ -378,14 +381,14 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 				continue
 			}
 			if binder, ok := fieldPointer.(Binder); ok {
-				errs = binder.Bind(fieldName, strs, errs)
+				errs = binder.Bind(fieldSpec.Form, strs, errs)
 				continue
 			}
 		}
 
 		errorHandler := func(err error) {
 			if err != nil {
-				errs.Add([]string{fieldName}, TypeError, err.Error())
+				errs.Add([]string{fieldSpec.Form}, TypeError, err.Error())
 			}
 		}
 
@@ -660,12 +663,12 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 				*t = append(*t, val)
 			}
 		case **multipart.FileHeader:
-			if files, ok := formFile[fieldName]; ok {
+			if files, ok := formFile[fieldSpec.Form]; ok {
 				*t = files[0]
 			}
 
 		case *[]*multipart.FileHeader:
-			if files, ok := formFile[fieldName]; ok {
+			if files, ok := formFile[fieldSpec.Form]; ok {
 				for _, file := range files {
 					*t = append(*t, file)
 				}
@@ -681,18 +684,19 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 	return errs
 }
 
-func fieldNameAndSpec(fieldNameOrSpec interface{}) (string, bool, Field) {
-	var fieldName string
+func fieldSpecification(fieldNameOrSpec interface{}) (Field, error) {
+	var f Field
 
-	fieldSpec, fieldHasSpec := fieldNameOrSpec.(Field)
-
-	if fieldHasSpec {
-		fieldName = fieldSpec.Form
-	} else if name, ok := fieldNameOrSpec.(string); ok {
-		fieldName = name
+	switch vt := fieldNameOrSpec.(type) {
+	case Field:
+		f = vt
+	case string:
+		f.Form = vt
+	default:
+		return f, errors.New("invalid field specification")
 	}
 
-	return fieldName, fieldHasSpec, fieldSpec
+	return f, nil
 }
 
 type (
