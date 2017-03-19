@@ -371,15 +371,16 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 		_, isFileSlice := fieldPointer.(*[]*multipart.FileHeader)
 		strs := formData[fieldSpec.Form]
 
-		if fieldSpec.Binder != nil {
-			errs = fieldSpec.Binder(fieldSpec.Form, strs, errs)
-			continue
-		}
-
 		if !isFile && !isFileSlice {
 			if len(strs) == 0 {
 				continue
 			}
+
+			if fieldSpec.Binder != nil {
+				errs = fieldSpec.Binder(fieldSpec.Form, strs, errs)
+				continue
+			}
+
 			if binder, ok := fieldPointer.(Binder); ok {
 				errs = binder.Bind(fieldSpec.Form, strs, errs)
 				continue
