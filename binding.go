@@ -19,6 +19,8 @@ type requestBinder func(req *http.Request, userStruct FieldMapper) Errors
 // Bind takes data out of the request and deserializes into a struct according
 // to the Content-Type of the request. If no Content-Type is specified, there
 // better be data in the query string, otherwise an error will be produced.
+//
+// A non-nil return value may be an Errors value.
 func Bind(req *http.Request, userStruct FieldMapper) error {
 	var errs Errors
 

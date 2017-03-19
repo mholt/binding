@@ -9,7 +9,7 @@ import (
 
 type (
 	// Errors may be generated during deserialization, binding,
-	// or validation. It implements the built-in error interface.
+	// or validation.
 	Errors []Error
 
 	// An Error is an error that is associated with 0 or more fields of a

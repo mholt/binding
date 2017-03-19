@@ -122,7 +122,7 @@ func handler(resp http.ResponseWriter, req *http.Request) {
 	var err error
 	if fh, err = multipartForm.Data.Open(); err != nil {
 		http.Error(resp,
-			fmt.Sprint("Error opening Mime::Data %+v", err),
+			fmt.Sprint("Error opening Mime::Data %v", err),
 			http.StatusInternalServerError)
 		return
 	}
@@ -131,7 +131,7 @@ func handler(resp http.ResponseWriter, req *http.Request) {
 	var size int64
 	if size, err = dataBytes.ReadFrom(fh); err != nil {
 		http.Error(resp,
-			fmt.Sprint("Error reading Mime::Data %+v", err),
+			fmt.Sprint("Error reading Mime::Data %v", err),
 			http.StatusInternalServerError)
 		return
 	}
