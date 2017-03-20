@@ -1,6 +1,7 @@
 package binding
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -127,6 +128,18 @@ func (e fieldsError) Error() string {
 	}
 
 	return fmt.Sprintf("%s\n\n%s", e.message, strings.Join(fields, "\n"))
+}
+
+func (e fieldsError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		FieldNames     []string `json:"fieldNames,omitempty"`
+		Classification string   `json:"classification,omitempty"`
+		Message        string   `json:"message,omitempty"`
+	}{
+		FieldNames:     e.fields,
+		Classification: e.kind,
+		Message:        e.message,
+	})
 }
 
 const (
