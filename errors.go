@@ -127,7 +127,7 @@ func (e fieldsError) Error() string {
 		fields[i] = fmt.Sprintf("* %s", f)
 	}
 
-	return fmt.Sprintf("%s\n\n%s", e.message, strings.Join(fields, "\n"))
+	return fmt.Sprintf("%s\n\t%s", e.message, strings.Join(fields, "\n\t"))
 }
 
 func (e fieldsError) MarshalJSON() ([]byte, error) {
