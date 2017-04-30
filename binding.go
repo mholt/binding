@@ -183,9 +183,8 @@ func validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
 	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
-		fieldName, fieldHasSpec, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
-
-		if !fieldHasSpec {
+		fieldSpec, err := fieldSpecification(fieldNameOrSpec)
+		if err != nil {
 			continue
 		}
 
@@ -195,7 +194,7 @@ func validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
 				errorMsg = fieldSpec.ErrorMessage
 			}
 
-			errs.Add([]string{fieldName}, RequiredError, errorMsg)
+			errs.Add([]string{fieldSpec.Form}, RequiredError, errorMsg)
 		}
 		if fieldSpec.Required {
 			switch t := fieldPointer.(type) {
@@ -413,33 +412,22 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 	for fieldPointer, fieldNameOrSpec := range fm {
 
-		fieldName, _, fieldSpec := fieldNameAndSpec(fieldNameOrSpec)
-		_, isFile := fieldPointer.(**multipart.FileHeader)
-		_, isFileSlice := fieldPointer.(*[]*multipart.FileHeader)
-		strs := formData[fieldName]
-
-		if fieldSpec.Binder != nil {
-			err := fieldSpec.Binder(fieldName, strs)
-			if err != nil {
-				switch e := err.(type) {
-				case Error:
-					errs = append(errs, e)
-				case Errors:
-					errs = append(errs, e...)
-				default:
-					errs.Add([]string{fieldName}, "", e.Error())
-				}
-			}
-
+		fieldSpec, err := fieldSpecification(fieldNameOrSpec)
+		if err != nil {
 			continue
 		}
+
+		strs := formData[fieldSpec.Form]
+		_, isFile := fieldPointer.(**multipart.FileHeader)
+		_, isFileSlice := fieldPointer.(*[]*multipart.FileHeader)
 
 		if !isFile && !isFileSlice {
 			if len(strs) == 0 {
 				continue
 			}
-			if binder, ok := fieldPointer.(Binder); ok {
-				err := binder.Bind(fieldName, strs)
+
+			if fieldSpec.Binder != nil {
+				err := fieldSpec.Binder(fieldSpec.Form, strs)
 				if err != nil {
 					switch e := err.(type) {
 					case Error:
@@ -447,7 +435,21 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 					case Errors:
 						errs = append(errs, e...)
 					default:
-						errs.Add([]string{fieldName}, "", e.Error())
+						errs.Add([]string{fieldSpec.Form}, "", e.Error())
+					}
+				}
+				continue
+			}
+			if binder, ok := fieldPointer.(Binder); ok {
+				err := binder.Bind(fieldSpec.Form, strs)
+				if err != nil {
+					switch e := err.(type) {
+					case Error:
+						errs = append(errs, e)
+					case Errors:
+						errs = append(errs, e...)
+					default:
+						errs.Add([]string{fieldSpec.Form}, "", e.Error())
 					}
 				}
 				continue
@@ -456,7 +458,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 
 		errorHandler := func(err error) {
 			if err != nil {
-				errs.Add([]string{fieldName}, TypeError, err.Error())
+				errs.Add([]string{fieldSpec.Form}, TypeError, err.Error())
 			}
 		}
 
@@ -731,12 +733,12 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 				*t = append(*t, val)
 			}
 		case **multipart.FileHeader:
-			if files, ok := formFile[fieldName]; ok {
+			if files, ok := formFile[fieldSpec.Form]; ok {
 				*t = files[0]
 			}
 
 		case *[]*multipart.FileHeader:
-			if files, ok := formFile[fieldName]; ok {
+			if files, ok := formFile[fieldSpec.Form]; ok {
 				for _, file := range files {
 					*t = append(*t, file)
 				}
@@ -749,18 +751,19 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 	return validate(errs, req, userStruct)
 }
 
-func fieldNameAndSpec(fieldNameOrSpec interface{}) (string, bool, Field) {
-	var fieldName string
+func fieldSpecification(fieldNameOrSpec interface{}) (Field, error) {
+	var f Field
 
-	fieldSpec, fieldHasSpec := fieldNameOrSpec.(Field)
-
-	if fieldHasSpec {
-		fieldName = fieldSpec.Form
-	} else if name, ok := fieldNameOrSpec.(string); ok {
-		fieldName = name
+	switch vt := fieldNameOrSpec.(type) {
+	case Field:
+		f = vt
+	case string:
+		f.Form = vt
+	default:
+		return f, errors.New("invalid field specification")
 	}
 
-	return fieldName, fieldHasSpec, fieldSpec
+	return f, nil
 }
 
 type (
