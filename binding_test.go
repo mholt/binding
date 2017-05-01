@@ -2,11 +2,11 @@ package binding
 
 import (
 	"bytes"
-	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -167,17 +167,18 @@ func TestBind(t *testing.T) {
 }
 
 func TestBindForm(t *testing.T) {
-	Convey("Given a struct reference and complete form data", t, func() {
-		expected := NewCompleteModel()
-		formData := expected.FormValues()
+	Convey("Given a struct all of whose fields are required", t, func() {
+		actual := AllTypes{}
 
-		Convey("Given that all of the struct's fields are required", func() {
-			actual := AllTypes{}
+		Convey("Given form data with non-zero values for each of the fields", func() {
+			expected := NewCompleteModel()
+			formData := expected.FormValues()
+
 			Convey("When bindForm is called", func() {
 				req, err := http.NewRequest("POST", "http://www.example.com", nil)
 				So(err, ShouldBeNil)
 				var errs Errors
-				errs = bindForm(req, &actual, formData, nil, errs)
+				errs = bindForm(req, &actual, formData, nil)
 				Convey("Then all of the struct's fields should be populated", func() {
 					Convey("Then the Uint8 field should have the expected value", func() {
 						So(actual.Uint8, ShouldEqual, expected.Uint8)
@@ -365,8 +366,32 @@ func TestBindForm(t *testing.T) {
 					So(errs.Len(), ShouldEqual, 0)
 					if errs.Len() > 0 {
 						for _, e := range errs {
-							Println(fmt.Sprintf("%v. %s", e.FieldNames, e.Message))
+							t.Logf("%v. %s", e.Fields(), e.Error())
 						}
+					}
+				})
+			})
+		})
+
+		Convey("Given form data with zero values for each of the fields", func() {
+			Convey("When bindForm is called", func() {
+				req, err := http.NewRequest("POST", "http://www.example.com", nil)
+				So(err, ShouldBeNil)
+				errs := bindForm(req, &actual, map[string][]string{}, nil)
+				Convey("Then none of the struct's fields should be populated", func() {
+					expected := AllTypes{}
+					So(reflect.DeepEqual(actual, expected), ShouldBeTrue)
+				})
+
+				Convey("Then an error for each field should be produced", FailureContinues, func() {
+					fields := make(map[string]struct{})
+					for _, f := range actual.FieldMap(nil) {
+						fields[f.(Field).Form] = struct{}{}
+					}
+					for _, err := range errs {
+						So(len(err.Fields()), ShouldEqual, 1)
+						_, ok := fields[err.Fields()[0]]
+						So(ok, ShouldBeTrue)
 					}
 				})
 			})

@@ -67,8 +67,8 @@ func (cf *ContactForm) FieldMap(req *http.Request) binding.FieldMap {
 // Now your handlers can stay clean and simple
 func handler(resp http.ResponseWriter, req *http.Request) {
 	contactForm := new(ContactForm)
-	errs := binding.Bind(req, contactForm)
-	if errs.Handle(resp) {
+	if errs := binding.Bind(req, contactForm); errs != nil {
+		http.Error(resp, errs.Error(), http.StatusBadRequest)
 		return
 	}
 	fmt.Fprintf(resp, "From:    %d\n", contactForm.User.ID)
@@ -112,8 +112,8 @@ func (f *MultipartForm) FieldMap(req *http.Request) binding.FieldMap {
 // Handlers are still clean and simple
 func handler(resp http.ResponseWriter, req *http.Request) {
 	multipartForm := new(MultipartForm)
-	errs := binding.Bind(req, multipartForm)
-	if errs.Handle(resp) {
+	if errs := binding.Bind(req, multipartForm); errs != nil {
+		http.Error(resp, errs.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -123,7 +123,7 @@ func handler(resp http.ResponseWriter, req *http.Request) {
 	var err error
 	if fh, err = multipartForm.Data.Open(); err != nil {
 		http.Error(resp,
-			fmt.Sprint("Error opening Mime::Data %+v", err),
+			fmt.Sprint("Error opening Mime::Data %v", err),
 			http.StatusInternalServerError)
 		return
 	}
@@ -132,7 +132,7 @@ func handler(resp http.ResponseWriter, req *http.Request) {
 	var size int64
 	if size, err = dataBytes.ReadFrom(fh); err != nil {
 		http.Error(resp,
-			fmt.Sprint("Error reading Mime::Data %+v", err),
+			fmt.Sprint("Error reading Mime::Data %v", err),
 			http.StatusInternalServerError)
 		return
 	}
@@ -159,32 +159,15 @@ Custom data validation
 You may optionally have your type implement the `binding.Validator` interface to perform your own data validation. The `.Validate()` method is called after the struct is populated.
 
 ```go
-func (cf ContactForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+func (cf ContactForm) Validate(req *http.Request) error {
 	if cf.Message == "Go needs generics" {
-		errs = append(errs, binding.Error{
-			FieldNames:     []string{"message"},
-			Classification: "ComplaintError",
-			Message:        "Go has generics. They're called interfaces.",
-		})
+		return binding.Errors{
+			binding.NewError([]string{"message"}, "ComplaintError", "Go has generics. They're called interfaces.")
+		}
 	}
-	return errs
+	return nil
 }
 ```
-
-
-
-Error Handling
----------------
-
-`binding.Bind()` and each deserializer returns errors. You don't have to use them, but the `binding.Errors` type comes with a kind of built-in "handler" to write the errors to the response as JSON for you. For example, you might do this in your HTTP handler:
-
-```go
-if binding.Bind(req, contactForm).Handle(resp) {
-	return
-}
-```
-
-As you can see, if `.Handle(resp)` wrote errors to the response, your handler may gracefully exit.
 
 
 
@@ -197,9 +180,9 @@ For types you've defined, you can bind form data to it by implementing the `Bind
 ```go
 type MyType map[string]string
 
-func (t *MyType) Bind(fieldName string, strVals []string, errs binding.Errors) binding.Errors {
+func (t MyType) Bind(fieldName string, strVals []string) error {
 	t["formData"] = strVals[0]
-	return errs
+	return nil
 }
 ```
 
@@ -209,21 +192,20 @@ If you can't add a method to the type, you can still specify a `Binder` func in 
 func (t *MyType) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
 		"number": binding.Field{
-			Binder: func(fieldName string, formVals []string, errs binding.Errors) binding.Errors {
+			Binder: func(fieldName string, formVals []string) error {
 				val, err := strconv.Atoi(formVals[0])
 				if err != nil {
-					errs.Add([]string{fieldName}, binding.DeserializationError, err.Error())
+					return binding.Errors{binding.NewError([]string{fieldName}, binding.DeserializationError, err.Error())}
 				}
 				t.SomeNumber = val
-				return errs
+				return nil
 			},
 		},
 	}
 }
 ```
 
-Notice that the `binding.Errors` type has a convenience method `.Add()` which you can use to append to the slice if you prefer.
-
+The `Errors` type has a convenience method, `Add`, which you can use to append to the slice if you prefer.
 
 Supported types (forms)
 ------------------------
