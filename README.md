@@ -1,5 +1,6 @@
 [<img src="http://mholt.github.io/binding/resources/images/binding-sm.png" height="250" alt="binding is reflectionless data binding for Go"></a>](http://mholt.github.io/binding)
 
+[![GoDoc](https://godoc.org/github.com/mholt/binding?status.svg)](https://godoc.org/github.com/mholt/binding)
 
 binding
 =======
