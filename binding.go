@@ -838,6 +838,6 @@ var (
 )
 
 const (
-	jsonContentType           = "application/json; charset=utf-8"
+	jsonContentType           = "application/problem+json; charset=utf-8"
 	StatusUnprocessableEntity = 422
 )
