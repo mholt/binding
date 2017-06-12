@@ -378,6 +378,10 @@ func validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
 				if len(*t) == 0 {
 					addRequiredError()
 				}
+			case **multipart.FileHeader:
+				if *t == nil {
+					addRequiredError()
+				}
 			}
 		}
 	}
