@@ -178,9 +178,9 @@ For types you've defined, you can bind form data to it by implementing the `Bind
 
 
 ```go
-type MyType map[string]string
+type MyBinder map[string]string
 
-func (t MyType) Bind(fieldName string, strVals []string) error {
+func (t MyBinder) Bind(fieldName string, strVals []string) error {
 	t["formData"] = strVals[0]
 	return nil
 }
@@ -189,9 +189,10 @@ func (t MyType) Bind(fieldName string, strVals []string) error {
 If you can't add a method to the type, you can still specify a `Binder` func in the field spec. Here's a contrived example that binds an integer (not necessary, but you get the idea):
 
 ```go
-func (t *MyType) FieldMap() binding.FieldMap {
+func (t *MyType) FieldMap(req *http.Request) binding.FieldMap {
 	return binding.FieldMap{
-		"number": binding.Field{
+		"a-key": binding.Field{
+			Form: "number",
 			Binder: func(fieldName string, formVals []string) error {
 				val, err := strconv.Atoi(formVals[0])
 				if err != nil {
