@@ -415,7 +415,6 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
-
 		fieldSpec, err := fieldSpecification(fieldNameOrSpec)
 		if err != nil {
 			continue
@@ -426,10 +425,6 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 		_, isFileSlice := fieldPointer.(*[]*multipart.FileHeader)
 
 		if !isFile && !isFileSlice {
-			if len(strs) == 0 {
-				continue
-			}
-
 			if fieldSpec.Binder != nil {
 				err := fieldSpec.Binder(fieldSpec.Form, strs)
 				if err != nil {
@@ -444,6 +439,7 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 				}
 				continue
 			}
+
 			if binder, ok := fieldPointer.(Binder); ok {
 				err := binder.Bind(fieldSpec.Form, strs)
 				if err != nil {
@@ -456,6 +452,10 @@ func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]s
 						errs.Add([]string{fieldSpec.Form}, "", e.Error())
 					}
 				}
+				continue
+			}
+
+			if len(strs) == 0 {
 				continue
 			}
 		}
