@@ -96,6 +96,23 @@ func defaultURLBinder(req *http.Request, userStruct FieldMapper) Errors {
 	return bindForm(req, userStruct, req.URL.Query(), nil)
 }
 
+// Header reads data out of the header into a struct you provide.
+// This function invokes data validation after deserialization.
+func Header(req *http.Request, userStruct FieldMapper) error {
+	err := headerBinder(req, userStruct)
+	if len(err) > 0 {
+		return err
+	}
+	return nil
+
+}
+
+var headerBinder requestBinder = defaultHeaderBinder
+
+func defaultHeaderBinder(req *http.Request, userStruct FieldMapper) Errors {
+	return bindForm(req, userStruct, req.Header, nil)
+}
+
 // MultipartForm reads a multipart form request and deserializes its data and
 // files into a struct you provide. Files should be deserialized into
 // *multipart.FileHeader fields.
