@@ -85,7 +85,7 @@ func TestBind(t *testing.T) {
 			Convey("Should invoke the Form deserializer", func() {
 				model := new(Model)
 				invoked := false
-				formBinder = func(req *http.Request, v FieldMapper) Errors {
+				formBinder = func(req *http.Request, v FieldMapper) error {
 					invoked = true
 					return defaultFormBinder(req, v)
 				}
@@ -120,7 +120,7 @@ func TestBind(t *testing.T) {
 			Convey("Should invoke the MultipartForm deserializer", func() {
 				model := new(Model)
 				invoked := false
-				multipartFormBinder = func(req *http.Request, v FieldMapper) Errors {
+				multipartFormBinder = func(req *http.Request, v FieldMapper) error {
 					invoked = true
 					return defaultMultipartFormBinder(req, v)
 				}
@@ -147,7 +147,7 @@ func TestBind(t *testing.T) {
 			Convey("Should invoke Json deserializer", func() {
 				model := new(Model)
 				invoked := false
-				jsonBinder = func(req *http.Request, v FieldMapper) Errors {
+				jsonBinder = func(req *http.Request, v FieldMapper) error {
 					invoked = true
 					return defaultJsonBinder(req, v)
 				}
@@ -177,8 +177,7 @@ func TestBindForm(t *testing.T) {
 			Convey("When bindForm is called", func() {
 				req, err := http.NewRequest("POST", "http://www.example.com", nil)
 				So(err, ShouldBeNil)
-				var errs Errors
-				errs = bindForm(req, &actual, formData, nil)
+				err = bindForm(req, &actual, formData, nil)
 				Convey("Then all of the struct's fields should be populated", func() {
 					Convey("Then the Uint8 field should have the expected value", func() {
 						So(actual.Uint8, ShouldEqual, expected.Uint8)
@@ -363,6 +362,8 @@ func TestBindForm(t *testing.T) {
 				})
 
 				Convey("Then no errors should be produced", FailureContinues, func() {
+					errs, ok := err.(Errors)
+					So(ok, ShouldBeTrue)
 					So(errs.Len(), ShouldEqual, 0)
 					if errs.Len() > 0 {
 						for _, e := range errs {
@@ -377,7 +378,7 @@ func TestBindForm(t *testing.T) {
 			Convey("When bindForm is called", func() {
 				req, err := http.NewRequest("POST", "http://www.example.com", nil)
 				So(err, ShouldBeNil)
-				errs := bindForm(req, &actual, map[string][]string{}, nil)
+				err = bindForm(req, &actual, map[string][]string{}, nil)
 				Convey("Then none of the struct's fields should be populated", func() {
 					expected := AllTypes{}
 					So(reflect.DeepEqual(actual, expected), ShouldBeTrue)
@@ -388,6 +389,8 @@ func TestBindForm(t *testing.T) {
 					for _, f := range actual.FieldMap(nil) {
 						fields[f.(Field).Form] = struct{}{}
 					}
+					errs, ok := err.(Errors)
+					So(ok, ShouldEqual, true)
 					for _, err := range errs {
 						So(len(err.Fields()), ShouldEqual, 1)
 						_, ok := fields[err.Fields()[0]]
