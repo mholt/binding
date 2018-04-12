@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-type requestBinder func(req *http.Request, userStruct FieldMapper) Errors
+type requestBinder func(req *http.Request, userStruct FieldMapper) error
 
 // Bind takes data out of the request and deserializes into a struct according
 // to the Content-Type of the request. If no Content-Type is specified, there
@@ -44,7 +44,12 @@ func Bind(req *http.Request, userStruct FieldMapper) error {
 
 	if contentType == "" {
 		errs.Add([]string{}, ContentTypeError, "Empty Content-Type")
-		errs = validate(errs, req, userStruct)
+		err := validate(errs, req, userStruct)
+		if errs2, ok := err.(Errors); ok {
+			errs = errs2
+		} else {
+			return err
+		}
 	} else {
 		errs.Add([]string{}, ContentTypeError, "Unsupported Content-Type")
 	}
@@ -59,15 +64,18 @@ func Bind(req *http.Request, userStruct FieldMapper) error {
 // This function invokes data validation after deserialization.
 func Form(req *http.Request, userStruct FieldMapper) error {
 	err := formBinder(req, userStruct)
-	if len(err) > 0 {
-		return err
+	if errs, ok := err.(Errors); ok {
+		if len(errs) > 0 {
+			return errs
+		}
+		return nil
 	}
-	return nil
+	return err
 }
 
 var formBinder requestBinder = defaultFormBinder
 
-func defaultFormBinder(req *http.Request, userStruct FieldMapper) Errors {
+func defaultFormBinder(req *http.Request, userStruct FieldMapper) error {
 	var errs Errors
 
 	parseErr := req.ParseForm()
@@ -83,16 +91,18 @@ func defaultFormBinder(req *http.Request, userStruct FieldMapper) Errors {
 // This function invokes data validation after deserialization.
 func URL(req *http.Request, userStruct FieldMapper) error {
 	err := urlBinder(req, userStruct)
-	if len(err) > 0 {
-		return err
+	if errs, ok := err.(Errors); ok {
+		if len(errs) > 0 {
+			return errs
+		}
+		return nil
 	}
-	return nil
-
+	return err
 }
 
 var urlBinder requestBinder = defaultURLBinder
 
-func defaultURLBinder(req *http.Request, userStruct FieldMapper) Errors {
+func defaultURLBinder(req *http.Request, userStruct FieldMapper) error {
 	return bindForm(req, userStruct, req.URL.Query(), nil)
 }
 
@@ -101,16 +111,18 @@ func defaultURLBinder(req *http.Request, userStruct FieldMapper) Errors {
 // *multipart.FileHeader fields.
 func MultipartForm(req *http.Request, userStruct FieldMapper) error {
 	err := multipartFormBinder(req, userStruct)
-	if len(err) > 0 {
-		return err
+	if errs, ok := err.(Errors); ok {
+		if len(errs) > 0 {
+			return errs
+		}
+		return nil
 	}
-
-	return nil
+	return err
 }
 
 var multipartFormBinder requestBinder = defaultMultipartFormBinder
 
-func defaultMultipartFormBinder(req *http.Request, userStruct FieldMapper) Errors {
+func defaultMultipartFormBinder(req *http.Request, userStruct FieldMapper) error {
 	var errs Errors
 
 	multipartReader, err := req.MultipartReader()
@@ -135,16 +147,18 @@ func defaultMultipartFormBinder(req *http.Request, userStruct FieldMapper) Error
 // This function invokes data validation after deserialization.
 func Json(req *http.Request, userStruct FieldMapper) error {
 	err := jsonBinder(req, userStruct)
-	if len(err) > 0 {
-		return err
+	if errs, ok := err.(Errors); ok {
+		if len(errs) > 0 {
+			return errs
+		}
+		return nil
 	}
-
-	return nil
+	return err
 }
 
 var jsonBinder requestBinder = defaultJsonBinder
 
-func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
+func defaultJsonBinder(req *http.Request, userStruct FieldMapper) error {
 	var errs Errors
 
 	if req.Body != nil {
@@ -159,12 +173,14 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 		return errs
 	}
 
-	errs = validate(errs, req, userStruct)
-	if len(errs) > 0 {
-		return errs
+	err := validate(errs, req, userStruct)
+	if errs2, ok := err.(Errors); ok {
+		if len(errs2) > 0 {
+			return errs2
+		}
+		return nil
 	}
-
-	return nil
+	return err
 }
 
 // Validate ensures that all conditions have been met on every field in the
@@ -172,14 +188,16 @@ func defaultJsonBinder(req *http.Request, userStruct FieldMapper) Errors {
 // deserialized into the struct.
 func Validate(req *http.Request, userStruct FieldMapper) error {
 	err := validate(Errors{}, req, userStruct)
-	if len(err) > 0 {
-		return err
+	if errs, ok := err.(Errors); ok {
+		if len(errs) > 0 {
+			return errs
+		}
+		return nil
 	}
-
-	return nil
+	return err
 }
 
-func validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
+func validate(errs Errors, req *http.Request, userStruct FieldMapper) error {
 	fm := userStruct.FieldMap(req)
 
 	for fieldPointer, fieldNameOrSpec := range fm {
@@ -395,20 +413,16 @@ func validate(errs Errors, req *http.Request, userStruct FieldMapper) Errors {
 			case Errors:
 				errs = append(errs, e...)
 			default:
-				errs.Add([]string{}, "", e.Error())
+				return err
 			}
 		}
 	}
 
-	if len(errs) > 0 {
-		return errs
-	}
-
-	return nil
+	return errs
 }
 
 func bindForm(req *http.Request, userStruct FieldMapper, formData map[string][]string,
-	formFile map[string][]*multipart.FileHeader) Errors {
+	formFile map[string][]*multipart.FileHeader) error {
 
 	var errs Errors
 
